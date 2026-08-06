@@ -32,32 +32,16 @@ import os
 
 import pandas as pd
 
-from algos.almgren_chriss import AlmgrenChrissAlgorithm
-from algos.impact_calibration import build_empirical_params, literature_coefficients
 from algos.twap import TWAPAlgorithm
-from algos.vwap import VWAPAlgorithm
-from backtest.algorithm import NaiveMarketOrderAlgorithm
 from backtest.book_history import BookHistoryReader
 from backtest.experiment import is_robust, run_bootstrap_experiment, window_regime_labels
 from backtest.fill_model import FillModel
 from backtest.order import ParentOrder
-from backtest.simulator import OrderSlicingSimulator
-from data.volume_profile import build_volume_profile
+from backtest.scenarios import build_algorithm_scenarios
 from rl.episodes import enumerate_episode_windows
 from venues.fees import VENUE_FEE_SCHEDULES
 from venues.multi_venue_simulator import MultiVenueSimulator
 from venues.router import BestEffectivePriceRouter, SingleVenueRouter
-
-
-def make_scenario(simulator, algorithm, side, quantity, venue, symbol):
-    def run(window):
-        parent = ParentOrder(
-            venue=venue, symbol=symbol, side=side, quantity=quantity,
-            start_time=window.start_time, end_time=window.end_time,
-        )
-        return simulator.run(parent, algorithm).shortfall.total_cost_bps
-
-    return run
 
 
 def print_results_table(results, title):
@@ -126,64 +110,17 @@ def main():
         window_regimes = window_regime_labels(windows, regimes_df)
 
     fill_model = FillModel(args.temporary_impact_coef, args.permanent_impact_coef)
-    simulator = OrderSlicingSimulator(book_history, fill_model)
 
     # --- 1. algorithm comparison (single venue) ---
-    algorithm_scenarios = {
-        "naive": make_scenario(
-            simulator, NaiveMarketOrderAlgorithm(), args.side, args.quantity, book_history.venue, book_history.symbol
-        ),
-        "twap": make_scenario(
-            simulator, TWAPAlgorithm(args.n_slices), args.side, args.quantity, book_history.venue, book_history.symbol
-        ),
-    }
-
-    volume_csv = args.volume_csv or os.path.join(
-        "data", "raw", "volume", f"{book_history.venue}_{book_history.symbol}_60m.csv"
+    algorithm_scenarios = build_algorithm_scenarios(
+        book_history, fill_model, args.side, args.quantity, args.n_slices,
+        volume_csv=args.volume_csv, time_of_day_alpha=args.time_of_day_alpha,
+        ac_volatility=args.ac_volatility, ac_risk_aversion=args.ac_risk_aversion,
+        ac_permanent_to_temporary_ratio=args.ac_permanent_to_temporary_ratio,
+        ac_sqrt_law_coefficient=args.ac_sqrt_law_coefficient,
+        ac_reference_participation_rate=args.ac_reference_participation_rate,
+        ac_empirical_order_sizes=args.ac_empirical_order_sizes,
     )
-    if os.path.exists(volume_csv):
-        volume_df = pd.read_csv(volume_csv, parse_dates=["open_time"])
-        profile = build_volume_profile(volume_df, alpha=args.time_of_day_alpha)
-        algorithm_scenarios["vwap"] = make_scenario(
-            simulator, VWAPAlgorithm(args.n_slices, profile.weights),
-            args.side, args.quantity, book_history.venue, book_history.symbol,
-        )
-    else:
-        print(f"(skipping vwap: no volume data at {volume_csv})")
-
-    ac_base_args_given = (
-        args.ac_volatility is not None
-        and args.ac_risk_aversion is not None
-        and args.ac_permanent_to_temporary_ratio is not None
-    )
-    if ac_base_args_given:
-        if args.ac_sqrt_law_coefficient is not None and args.ac_reference_participation_rate is not None:
-            lit_params = literature_coefficients(
-                volatility=args.ac_volatility, risk_aversion=args.ac_risk_aversion,
-                sqrt_law_coefficient=args.ac_sqrt_law_coefficient,
-                reference_participation_rate=args.ac_reference_participation_rate,
-                permanent_to_temporary_ratio=args.ac_permanent_to_temporary_ratio,
-            )
-            algorithm_scenarios["ac_literature"] = make_scenario(
-                simulator, AlmgrenChrissAlgorithm(args.n_slices, lit_params),
-                args.side, args.quantity, book_history.venue, book_history.symbol,
-            )
-        if args.ac_empirical_order_sizes is not None:
-            order_sizes = [float(s) for s in args.ac_empirical_order_sizes.split(",")]
-            emp_params, _ = build_empirical_params(
-                book_history, order_sizes, args.side,
-                volatility=args.ac_volatility, risk_aversion=args.ac_risk_aversion,
-                permanent_to_temporary_ratio=args.ac_permanent_to_temporary_ratio,
-            )
-            algorithm_scenarios["ac_empirical"] = make_scenario(
-                simulator, AlmgrenChrissAlgorithm(args.n_slices, emp_params),
-                args.side, args.quantity, book_history.venue, book_history.symbol,
-            )
-    else:
-        print(
-            "(skipping ac_literature/ac_empirical: --ac-volatility/--ac-risk-aversion/"
-            "--ac-permanent-to-temporary-ratio not all given)"
-        )
 
     algorithm_results = run_bootstrap_experiment(
         windows, algorithm_scenarios, window_regimes=window_regimes,

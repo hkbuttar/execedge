@@ -104,13 +104,59 @@ larger) is a real empirical question this project hasn't run against live
 data yet — that's on you to check with the command above once you have a
 three-venue recording.
 
+## Cross-venue validation: does the algorithm ranking replicate?
+
+Different question from routing: instead of moving one execution across
+venues, `cross_venue_validation.py` runs the *same algorithm comparison*
+independently on each venue's own real data — Binance judged entirely on
+Binance's book, Coinbase on Coinbase's, Kraken on Kraken's, no
+cross-venue leakage — and checks whether the ranking (does Almgren-Chriss
+beat VWAP, does VWAP beat TWAP) is consistent, or diverges by venue.
+
+This is this project's stand-in for a cross-asset-class robustness check.
+The original plan for a LOBSTER-based branch would have validated
+findings against equities; since this project is crypto-only by design,
+robustness gets checked across the one axis of real variation it
+actually has — three genuinely different venues — instead.
+
+`rank_scenarios` extracts one venue's ordering (best/lowest shortfall
+first) from `backtest.experiment`'s bootstrap output; `compare_rankings_across_venues`
+compares orderings across venues, restricted to whichever scenarios are
+common to all of them (a venue missing real volume data, and therefore
+missing `vwap`, shouldn't block comparing the scenarios it does have).
+Reports honestly either way: `RANKING IS CONSISTENT` prints the shared
+order; `RANKING DIVERGES` prints exactly which venue disagrees with
+which, not just that something differs.
+
+```
+python3 -m venues.run_cross_venue_validation \
+    --binance-book-history lob/raw/binance_book_snapshots.jsonl \
+    --coinbase-book-history lob/raw/coinbase_book_snapshots.jsonl \
+    --kraken-book-history lob/raw/kraken_book_snapshots.jsonl \
+    --side buy --quantity 1.0 --n-slices 5 \
+    --episode-duration-seconds 60 --stride-seconds 60 \
+    --temporary-impact-coef 0.0 --permanent-impact-coef 0.0
+```
+
+Smoke-tested against synthetic three-venue data end to end (both the
+consistent and divergent cases produce the expected report).
+
+`backtest/scenarios.py`'s `build_algorithm_scenarios` (naive/twap/vwap/
+ac_literature/ac_empirical, matching whatever real volume/AC-calibration
+inputs are available for that venue) is shared between this and
+`backtest.run_experiment` — refactored out so both tools build the
+identical scenario set instead of drifting apart.
+
 ## Tests
 
 `tests/test_venue_fees.py`, `tests/test_venue_router.py`,
 `tests/test_multi_venue_simulator.py` — including a fee-vs-price
 tradeoff test (`test_best_price_router_accounts_for_fee_outweighing_raw_price_buy`)
 and confirmation that a fee is actually applied to fill prices, not just
-computed and discarded.
+computed and discarded. `tests/test_scenarios.py` and
+`tests/test_cross_venue_validation.py` cover the cross-venue validation
+pieces above, including the consistent-ranking, divergent-ranking, and
+common-scenarios-only cases.
 
 ## Not yet implemented
 

@@ -34,7 +34,7 @@ execedge/
 │                bootstrap confidence intervals, regime-stratified experiments
 ├── risk/       participation-rate limits, manual-reset-only kill switch
 ├── venues/     multi-venue routing, real fee schedules, cross-venue comparison
-└── tests/      174 tests (150 run offline in any environment; 24 need
+└── tests/      190 tests (166 run offline in any environment; 24 need
                  websocket-client installed to exercise the live reconciliation classes)
 ```
 
@@ -94,6 +94,10 @@ and the bootstrap-based statistical comparison.
   kill switch that is genuinely manual-reset-only.
 - **Multi-venue routing** — real, cited fee schedules per venue; smart
   routing compared honestly against always-using-one-venue baselines.
+- **Cross-venue validation** — the same algorithm ranking, checked
+  independently against each venue's own real data, reporting whether it
+  replicates or diverges by venue (this project's stand-in for a
+  cross-asset-class robustness check, since it's crypto-only by design).
 
 ## What's not yet implemented
 

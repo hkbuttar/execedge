@@ -86,6 +86,8 @@ backtest/
 ├── simulator.py        # OrderSlicingSimulator: ties the above together
 ├── bootstrap.py         # bootstrap_mean_ci
 ├── experiment.py         # generic regime-stratified scenario runner
+├── scenarios.py         # naive/twap/vwap/ac_literature/ac_empirical scenario builder,
+│                          shared with venues.cross_venue_validation
 ├── run_experiment.py    # statistical-rigor CLI
 └── run_backtest.py    # CLI
 ```
@@ -181,6 +183,12 @@ estimate. A "no" there means treat that row's conclusion, including its
 sign, with real caution — this is the same "flag which findings are
 robust vs. fragile" discipline the final results writeup needs, computed
 here rather than left to eyeballing a table.
+
+This module's algorithm-comparison scenarios (`backtest/scenarios.py`)
+are reused one level up by `venues.cross_venue_validation`, which runs
+the same comparison independently per venue and checks whether the
+*ranking* of algorithms replicates across Binance/Coinbase/Kraken's real
+data, rather than diverging — see `venues/README.md`.
 
 ## Known limitations / not yet done
 
