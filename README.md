@@ -34,7 +34,8 @@ execedge/
 │                bootstrap confidence intervals, regime-stratified experiments
 ├── risk/       participation-rate limits, manual-reset-only kill switch
 ├── venues/     multi-venue routing, real fee schedules, cross-venue comparison
-└── tests/      191 tests (167 run offline in any environment; 24 need
+├── backend/    FastAPI: serves backtest/calibration/training results as JSON
+└── tests/      205 tests (181 run offline in any environment; 24 need
                  websocket-client installed to exercise the live reconciliation classes)
 ```
 
@@ -43,7 +44,7 @@ disclosed limitations — start there for depth on any piece:
 [data/README.md](data/README.md), [lob/README.md](lob/README.md),
 [algos/README.md](algos/README.md), [rl/README.md](rl/README.md),
 [backtest/README.md](backtest/README.md), [risk/README.md](risk/README.md),
-[venues/README.md](venues/README.md).
+[venues/README.md](venues/README.md), [backend/README.md](backend/README.md).
 
 [RESULTS.md](RESULTS.md) pulls all of the above together into the actual
 comparison — algorithm × regime × venue-routing × calibration-source ×
@@ -105,10 +106,15 @@ and the bootstrap-based statistical comparison.
   independently against each venue's own real data, reporting whether it
   replicates or diverges by venue (this project's stand-in for a
   cross-asset-class robustness check, since it's crypto-only by design).
+- **Backend (FastAPI)** — serves backtest, calibration, cross-venue, and
+  training results as JSON; every route is a thin wrapper reusing the
+  exact same functions the CLIs do, nothing reimplemented. Deliberately
+  doesn't expose long-running operations (recording a live book, training
+  RL) over HTTP — those stay CLI-only.
 
 ## What's not yet implemented
 
-- Backend (FastAPI) and frontend (Bokeh) serving layers, and deployment.
+- Frontend (Bokeh) serving layer, and deployment.
 - Tick/lot-size rounding on child order prices/sizes.
 - Continuous-action RL (only size is discretized here).
 - Venue-level risk limits for multi-venue routing (today's risk layer is
