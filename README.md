@@ -20,6 +20,12 @@ claim.
 No API keys are required anywhere in this project — every venue
 integration uses public, unauthenticated REST/websocket endpoints.
 
+**Live demo**: [execedge-frontend.onrender.com/app](https://execedge-frontend.onrender.com/app)
+— free-tier Render, so it spins down after 15 minutes idle (~30–60s cold
+start on the first request). See `DEPLOYMENT.md` for known data gaps on
+the deployed instance (e.g. Coinbase/Kraken book history not recorded
+there yet).
+
 ## Layout
 
 ```
