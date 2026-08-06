@@ -57,9 +57,17 @@ services:
     # is needed because Render terminates TLS at its proxy and forwards
     # via X-Forwarded-* headers, which Bokeh must trust to get the
     # origin check right.
+    #
+    # No `bash -c "..."` wrapper here (unlike an earlier version of this
+    # file) -- Render already runs dockerCommand through a shell and
+    # substitutes $PORT/$RENDER_EXTERNAL_HOSTNAME itself, so wrapping it
+    # in our own quoted `bash -c` double-processed the quoting and Render
+    # tried to exec the entire literal string as one command
+    # ("No such file or directory"). Plain and unquoted, like the backend
+    # service's dockerCommand above, which deploys fine.
     dockerCommand: >-
-      bash -c "bokeh serve frontend/app.py --port $PORT --address 0.0.0.0
-      --allow-websocket-origin=$RENDER_EXTERNAL_HOSTNAME --use-xheaders"
+      bokeh serve frontend/app.py --port $PORT --address 0.0.0.0
+      --allow-websocket-origin=$RENDER_EXTERNAL_HOSTNAME --use-xheaders
     envVars:
       - key: PYTHONUNBUFFERED
         value: "1"
