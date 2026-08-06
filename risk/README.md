@@ -1,4 +1,4 @@
-# Risk layer (Step 9)
+# Risk layer
 
 Two controls, both cross-cutting: they wrap *any* algorithm's output
 inside `backtest.simulator.OrderSlicingSimulator`, rather than being
@@ -34,8 +34,9 @@ far more finely. There's no real sub-hour volume in this project's
 pipeline to check against directly, so `volume_between()` prorates each
 overlapping bar's real volume by the fraction of the bar's duration a
 query window covers — an assumption of uniform intra-bar volume, not a
-measurement. Step 3's own time-of-day findings are evidence real volume
-is *not* uniform across hours, so it's very unlikely to be perfectly
+measurement. The time-of-day findings (`data/time_of_day.py`) are
+evidence real volume is *not* uniform across hours, so it's very
+unlikely to be perfectly
 uniform within one either. Treat participation estimates from this as
 directionally right, not precise to the second.
 
@@ -92,9 +93,10 @@ visibly capping executed quantity.
 
 ## Not yet implemented
 
-- No risk control is regime-aware (Step 3's calm/normal/volatile labels
-  aren't consulted here) — a fixed `max_realized_vol` threshold applies
-  uniformly regardless of what regime the market is actually in.
-- No per-venue limits for Step 10's multi-venue routing yet — today's
+- No risk control is regime-aware (the calm/normal/volatile labels from
+  `data/regimes.py` aren't consulted here) — a fixed `max_realized_vol`
+  threshold applies uniformly regardless of what regime the market is
+  actually in.
+- No per-venue limits for multi-venue routing (`venues/`) yet — today's
   participation limiter and kill switch apply to a single simulator run
   against a single venue's book history.

@@ -1,4 +1,4 @@
-# Order book reconstruction (Step 2)
+# Order book reconstruction
 
 Each venue ships incremental order book updates over its own websocket
 protocol, with a genuinely different mechanism for detecting/recovering
@@ -99,8 +99,8 @@ configurable), and a rolling realized volatility of mid-price log returns
 (`RealizedVolTracker`). Realized vol here is per-observation, not
 annualized to a fixed time unit — update arrival rate differs across
 venues and isn't evenly spaced, so a fixed annualization factor would be
-misleading. Step 3 will need to resample this to comparable time buckets
-before comparing regimes across venues.
+misleading. Regime identification (`data/regimes.py`) resamples this to
+comparable time buckets before comparing regimes across venues.
 
 ## Running it
 
@@ -112,19 +112,19 @@ python3 -m lob.run_reconstruction --venues binance coinbase kraken --minutes 30
 ```
 
 Drop `--minutes` to run until Ctrl-C. Output: `lob/raw/{venue}_features.jsonl`,
-one line per book update, feeding Step 3 (regime identification) and
-later joins against Step 6's volume data.
+one line per book update, feeding regime identification and later joins
+against real volume data.
 
 ## Known limitations / not yet done
 
 - Only top-N *levels* are persisted (`--record-depth-levels`), not the
   raw diff messages themselves — if you want to replay exact book states
-  at arbitrary depth later (e.g. for Step 12's replay-based correctness
-  tests), the underlying diffs aren't saved, only the reconstructed
-  top-N snapshot after each one is applied.
-- Tick/lot size rounding for order-slicing (Step 4) isn't handled here;
-  each venue's minimum increment still needs to be pulled from its own
-  exchange-info endpoint before that step.
+  at arbitrary depth later (e.g. for replay-based correctness tests), the
+  underlying diffs aren't saved, only the reconstructed top-N snapshot
+  after each one is applied.
+- Tick/lot size rounding for order-slicing isn't handled here; each
+  venue's minimum increment still needs to be pulled from its own
+  exchange-info endpoint before order slicing needs it.
 - `book_at_or_before()` (`backtest/book_history.py`) silently returns the
   *last* recorded snapshot when asked for a timestamp past the end of
   the recorded history, rather than raising. Combined with a dropped

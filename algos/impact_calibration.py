@@ -1,5 +1,5 @@
 """Two calibration sources for Almgren-Chriss's linear impact coefficients
-(eta, gamma), compared directly -- this is Step 7's core deliverable.
+(eta, gamma), compared directly -- the core deliverable of this module.
 
 ## Literature calibration: a disclosed gap, not a silent guess
 

@@ -4,8 +4,8 @@ time granularity as TWAP -- n_slices equal-duration buckets across the
 window -- but each bucket's size is weighted by its hour-of-day's real
 historical volume share instead of 1/n_slices.
 
-If Step 3 found no significant time-of-day effect for this venue,
-`hourly_weights` will be flat (1/24 every hour) and VWAP degenerates
+If the time-of-day ANOVA (`data/time_of_day.py`) found no significant
+effect for this venue, `hourly_weights` will be flat (1/24 every hour) and VWAP degenerates
 exactly to TWAP -- which is the correct behavior, not a bug: there's
 nothing in the real data to shape the curve around, so it shouldn't
 pretend otherwise.

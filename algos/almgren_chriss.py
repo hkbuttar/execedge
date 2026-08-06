@@ -124,7 +124,7 @@ def sensitivity_variants(params: AlmgrenChrissParams, pct: float = 0.2) -> dict:
     """One-at-a-time +/-pct perturbation of the two calibrated impact
     coefficients (eta, gamma), isolating which one the resulting
     trajectory/cost is more sensitive to -- volatility and risk_aversion
-    are left fixed since they aren't what Step 7 calibrates."""
+    are left fixed since they aren't what gets calibrated here."""
     return {
         "base": params,
         "eta_low": replace(params, temporary_impact=params.temporary_impact * (1 - pct)),

@@ -1,4 +1,4 @@
-# Order-slicing simulator (Step 4)
+# Order-slicing simulator
 
 The core backtesting harness: given a parent order and an execution
 algorithm, slice into child orders, submit each against the real
@@ -49,10 +49,11 @@ disclosed simplification layered on top of it, and its mechanics are:
 
 `temporary_impact_coef` and `permanent_impact_coef` have **no default
 value** — `backtest/fill_model.py` and the `run_backtest` CLI both
-require them explicitly. Step 1 deliberately didn't hardcode literature
-impact numbers without a citation, and Step 7 is where literature-derived
-and empirically-estimated Almgren-Chriss coefficients actually get
-produced and compared. Pass `0.0` for both to see pure book-walk behavior
+require them explicitly. Real-data acquisition deliberately didn't
+hardcode literature impact numbers without a citation, and the
+Almgren-Chriss module is where literature-derived and
+empirically-estimated coefficients actually get produced and compared.
+Pass `0.0` for both to see pure book-walk behavior
 — that's a conscious choice made visible in the command, not a silent
 default masking an uncalibrated model as if it were finished.
 
@@ -70,8 +71,8 @@ a sell) and `opportunity_cost` charges (or credits — it can be negative)
 any quantity never filled, marked against the price at the parent
 order's window end versus its arrival price. This is what makes
 shortfall comparable across algorithms that complete different fractions
-of the order, which matters once Step 5+ starts comparing TWAP/VWAP/AC
-against each other.
+of the order, which matters once TWAP/VWAP/AC are compared against each
+other.
 
 ## Components
 
@@ -83,11 +84,14 @@ backtest/
 ├── fill_model.py       # the book-walk + impact mechanics described above
 ├── metrics.py         # implementation_shortfall
 ├── simulator.py        # OrderSlicingSimulator: ties the above together
+├── bootstrap.py         # bootstrap_mean_ci
+├── experiment.py         # generic regime-stratified scenario runner
+├── run_experiment.py    # statistical-rigor CLI
 └── run_backtest.py    # CLI
 ```
 
 `OrderSlicingSimulator` optionally takes a `participation_limiter` and/or
-`kill_switch` (+ `kill_switch_triggers`) — Step 9's risk layer, see
+`kill_switch` (+ `kill_switch_triggers`) — the risk layer, see
 `risk/README.md`. Both are cross-cutting: applied to whatever algorithm's
 child orders are being walked through, at each child order's own point in
 real time, since that's the only place in this project a genuinely
@@ -97,8 +101,8 @@ static/up-front design (see below). Off by default.
 `NaiveMarketOrderAlgorithm` (dumps the whole parent order as one child
 order at start_time) is a deliberately naive baseline that exists only to
 exercise this harness end to end — maximum market impact, zero timing
-risk. It is not TWAP. TWAP (`algos/twap.py`, Step 5) is the actual
-control algorithm this project benchmarks against — see `algos/README.md`.
+risk. It is not TWAP. TWAP (`algos/twap.py`) is the actual control
+algorithm this project benchmarks against — see `algos/README.md`.
 
 ## Prerequisite: a recorded book history
 
@@ -119,14 +123,74 @@ python3 -m backtest.run_backtest \
     --temporary-impact-coef 0.0 --permanent-impact-coef 0.0
 ```
 
+## Statistical rigor
+
+Every backtest result so far has been a single run against a single real
+window. This layer runs the same algorithm (or venue-routing strategy)
+across *many* real historical windows — different real dates/sessions as
+the source of variation, not a parametric assumption — and reports
+implementation shortfall with a bootstrap confidence interval, optionally
+stratified by the calm/normal/volatile regime labels (`data/regimes.py`).
+
+`backtest/bootstrap.py`'s `bootstrap_mean_ci` is the primitive: resample
+the observed per-window shortfall values with replacement many times
+(default 2000), take the percentile bounds of the resulting distribution
+of means. No assumption that per-window shortfall is normally
+distributed, which it has no particular reason to be.
+
+`backtest/experiment.py`'s `run_bootstrap_experiment` is deliberately
+generic — a "scenario" is just a function from a real window to a
+resulting shortfall bps number, so the same machinery covers algorithm
+comparisons, venue-routing comparisons, or calibration-source
+comparisons without hardcoding which axis is being compared.
+
+**Scoping decision worth stating explicitly**: the goal here is "every
+algorithm x regime x venue-routing x calibration-source combination."
+`backtest/run_experiment.py` runs two separate comparisons
+(algorithm-comparison, which already includes both AC calibration
+sources as separate scenarios; and venue-routing-comparison, using TWAP
+as a fixed representative algorithm) rather than one full combinatorial
+grid across all four dimensions. A full cross-product would produce far
+more rows than anyone could usefully read, and most of those cells would
+have too few real windows to bootstrap meaningfully anyway — every cell
+needs its *own* independent set of real historical windows, and
+real windows are the one thing this project can't fabricate more of.
+
+```
+python3 -m lob.run_reconstruction --venues binance --record-depth-levels 50 --minutes 60
+python3 -m data.fetch_volume --days 30 --interval 60
+python3 -m data.analyze_regimes --interval 60 --vol-window 24
+python3 -m backtest.run_experiment \
+    --book-history lob/raw/binance_book_snapshots.jsonl \
+    --side buy --quantity 1.0 --n-slices 5 \
+    --episode-duration-seconds 60 --stride-seconds 60 \
+    --temporary-impact-coef 0.0 --permanent-impact-coef 0.0 \
+    --regimes-csv data/raw/regimes/binance_regimes.csv
+```
+
+Add `--binance-book-history`/`--coinbase-book-history`/`--kraken-book-history`
+(all three) to also get the venue-routing comparison. Add
+`--ac-volatility`/`--ac-risk-aversion`/`--ac-permanent-to-temporary-ratio`
+(+ literature or empirical calibration flags, same as `run_backtest.py`)
+to include `ac_literature`/`ac_empirical` scenarios.
+
+Each printed row includes a `robust?` column — a stated heuristic
+(`backtest/experiment.py`'s `is_robust`), not a formal significance test:
+"robust" means the CI's width is less than half the absolute point
+estimate. A "no" there means treat that row's conclusion, including its
+sign, with real caution — this is the same "flag which findings are
+robust vs. fragile" discipline the final results writeup needs, computed
+here rather than left to eyeballing a table.
+
 ## Known limitations / not yet done
 
-- No venue fees or tick/lot-size rounding on child order prices/sizes yet
-  (Step 10, and noted as outstanding in `lob/README.md`).
+- No tick/lot-size rounding on child order prices/sizes yet (noted as
+  outstanding in `lob/README.md`); venue fees themselves are now handled
+  separately by `venues/` for the multi-venue routing comparison.
 - The impact model applies one adjustment per child order rather than
   per price level walked within it (see mechanics above) — a deliberate
-  simplicity choice, revisit if Step 7's empirical calibration suggests
-  it matters.
+  simplicity choice, revisit if the Almgren-Chriss empirical calibration
+  suggests it matters.
 - `ExecutionAlgorithm.slice()` is static/up-front; no algorithm here
   re-slices dynamically based on fills so far.
 - The simulator replays independently-recorded real snapshots and does

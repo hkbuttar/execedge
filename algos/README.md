@@ -1,11 +1,11 @@
-# Execution algorithms (Steps 5-7)
+# Execution algorithms
 
 Concrete strategies against `backtest.algorithm.ExecutionAlgorithm` (see
 `backtest/README.md` for the harness they run inside). This is
 distinguished from `backtest.algorithm.NaiveMarketOrderAlgorithm`, which
 is a harness-exercise baseline, not a real strategy.
 
-## TWAP (`twap.py`) — Step 5, the control
+## TWAP (`twap.py`) — the control
 
 Equal-size slices at regular time intervals: `parent.quantity / n_slices`
 per child, spaced `duration / n_slices` apart, starting at
@@ -35,12 +35,12 @@ a different timestamp. Against a real recording the book moves between
 snapshots for real reasons, so this isn't "free" liquidity in practice --
 but it's worth being aware the mechanism exists.
 
-## VWAP (`vwap.py`) — Step 6, built on the real volume curve
+## VWAP (`vwap.py`) — built on the real volume curve
 
 Same regular-interval slicing as TWAP (n_slices equal-duration buckets
 across the window), but each bucket's size is weighted by its hour-of-
 day's real historical volume share (`data/volume_profile.py`) instead of
-1/n_slices. The weights come from `data.time_of_day`'s ANOVA (Step 3):
+1/n_slices. The weights come from `data.time_of_day`'s ANOVA:
 
 - **No significant time-of-day effect found** → the profile is flat
   (every hour weighted 1/24) → VWAP's sizing is mathematically identical
@@ -72,7 +72,7 @@ python3 -m backtest.run_backtest \
 (`--volume-csv` defaults to `data/raw/volume/{venue}_{symbol}_{volume-interval}m.csv`,
 matching `data.fetch_volume`'s default output naming.)
 
-## Almgren-Chriss (`almgren_chriss.py`, `impact_calibration.py`) — Step 7
+## Almgren-Chriss (`almgren_chriss.py`, `impact_calibration.py`)
 
 Citation: Almgren, R., Chriss, N. (2000). "Optimal Execution of Portfolio
 Transactions." *Journal of Risk*, 3, 5-39. Closed-form optimal
@@ -108,7 +108,7 @@ not a bug.
 ### Dual calibration — and a disclosed gap in the literature source
 
 **Literature calibration** is supposed to use published, equities-derived
-impact coefficients (Step 1's plan). In practice: the two standard
+impact coefficients. In practice: the two standard
 citable sources — Almgren-Chriss's own 2000 paper's worked numerical
 example, and Almgren/Thum/Hauptmann/Li (2005) "Direct Estimation of
 Equity Market Impact," which fits coefficients to real Citigroup order
@@ -143,21 +143,21 @@ squares through the origin (consistent with linear `h(v) = eta*v`).
 `tests/test_impact_calibration.py` proves this recovers a known-planted
 linear impact law to `1e-9` relative precision against a constructed
 book, and separately confirms the plumbing (`estimate_empirical_temporary_impact_per_regime`)
-correctly splits samples by Step 3's calm/normal/volatile labels via a
+correctly splits samples by the calm/normal/volatile labels via a
 timestamp join (`pandas.merge_asof`) against `data/analyze_regimes.py`'s
 output.
 
 **It cannot estimate permanent impact**, and this is a real limitation,
 not an oversight: observing permanent impact needs real subsequent price
 drift attributable to an actual trade of known size — that needs real
-trade prints. This project's data pipeline (Steps 1-2) records order book
-*depth*, not trade executions, so that data doesn't exist here. The
-"empirical" calibration set's `gamma` still falls back to the same
+trade prints. This project's data pipeline records order book *depth*,
+not trade executions, so that data doesn't exist here. The "empirical"
+calibration set's `gamma` still falls back to the same
 `permanent_to_temporary_ratio` placeholder as the literature set — only
 `eta` is genuinely empirical.
 
-**Comparing the two** (`compare_calibrations`) is itself one of Step 7's
-intended findings: run both, look at the ratio. Given the fill model's
+**Comparing the two** (`compare_calibrations`) is itself one of the
+intended findings here: run both, look at the ratio. Given the fill model's
 book-walk `eta` reflects this project's own recorded crypto liquidity and
 the literature convention is an equities-motivated order-of-magnitude
 placeholder, a large divergence wouldn't be surprising — but that's
@@ -190,6 +190,10 @@ python3 -m backtest.run_backtest \
     --ac-permanent-to-temporary-ratio 0.01 --ac-empirical-order-sizes 0.1,0.5,1.0,2.0,5.0
 ```
 
-## Not yet implemented
+## Also compared against
 
-- An RL execution policy (Step 8) to compare against all of the above.
+- An RL execution policy (`rl/`) — see `rl/README.md`. It plugs into the
+  same `backtest.algorithm.ExecutionAlgorithm` interface as everything
+  above via `rl.policy_algorithm.TrainedPolicyAlgorithm`, so it's
+  benchmarked against TWAP/VWAP/AC through the identical harness rather
+  than a separate evaluation path.

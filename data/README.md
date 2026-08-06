@@ -33,8 +33,8 @@ letting "Binance" imply the deepest, most liquid book in crypto:
 - **Tick/lot size**: each venue enforces its own minimum price increment
   and minimum order size for BTC/USD (exposed via each venue's
   `exchangeInfo`-equivalent endpoint); these aren't hardcoded here yet and
-  should be pulled per-venue before the order-slicing simulator (Step 4)
-  needs to round child-order sizes/prices.
+  should be pulled per-venue before the order-slicing simulator needs to
+  round child-order sizes/prices.
 - **Depth snapshot semantics**: Binance and Coinbase return price-level-
   aggregated books (multiple orders at a price level are summed) at the
   requested depth. Kraken's `Depth` endpoint is also aggregated by price
@@ -45,9 +45,9 @@ letting "Binance" imply the deepest, most liquid book in crypto:
   bar sizes (Binance: 1/3/5/15/30m, 1/2/4/6/8/12h, 1d, 3d, 1w; Coinbase:
   60/300/900/3600/21600/86400s; Kraken: 1/5/15/30/60/240/1440/10080/21600
   minutes). **60 minutes is the largest interval every venue supports
-  natively**, so cross-venue volume-profile comparisons (Step 3, Step 6)
-  should default to hourly bars unless a finer interval is confirmed
-  supported on all venues in use.
+  natively**, so cross-venue volume-profile comparisons (regime
+  identification, VWAP) should default to hourly bars unless a finer
+  interval is confirmed supported on all venues in use.
 - **Kraken pair-name quirk**: requesting pair `XBTUSD` returns results
   keyed under an internal name (`XXBTZUSD`); the client reads the first
   key of the response rather than assuming the request symbol round-trips.
@@ -59,10 +59,10 @@ market-open/market-close volume spike the way equities have. Whether
 crypto BTC/USD still shows *any* repeatable intraday (hour-of-day) volume
 pattern — driven by regional trading-session overlap (Asia/Europe/US) even
 without a formal open/close — is an open, disclosed empirical question,
-not an assumption. Step 3 checks this directly against real volume data
-before Step 6's VWAP profile is built flat or curved.
+not an assumption. This project checks it directly against real volume
+data before VWAP's profile is built flat or curved.
 
-## Impact parameter estimates (placeholder — finalized in Step 7)
+## Impact parameter estimates (placeholder — finalized in the Almgren-Chriss module)
 
 The Almgren-Chriss (2000) framework parameterizes execution cost with a
 permanent impact term (linear in trade size, moves the reference price
@@ -77,18 +77,19 @@ functional form more credibility than any single numeric coefficient.
 
 This project will:
 1. Pull specific published coefficient values (with citations) when the
-   Almgren-Chriss implementation lands in Step 7, flagged explicitly as
+   Almgren-Chriss implementation lands, flagged explicitly as
    **equities-derived, applied to crypto as a disclosed cross-asset-class
    assumption.**
 2. Separately estimate coefficients directly from this project's own
-   reconstructed real order book (Step 7's empirical calibration), and
-   compare the two — divergence between them is itself a result worth
-   reporting, not just a calibration detail.
+   reconstructed real order book (Almgren-Chriss's empirical calibration),
+   and compare the two — divergence between them is itself a result
+   worth reporting, not just a calibration detail.
 
-No numeric values are hardcoded yet; this section exists so Step 7 has a
-documented starting point rather than an unstated assumption.
+No numeric values are hardcoded yet; this section exists so the
+Almgren-Chriss module has a documented starting point rather than an
+unstated assumption.
 
-## Regime identification & the time-of-day question (Step 3)
+## Regime identification & the time-of-day question
 
 `data/regimes.py` computes rolling realized volatility (annualized std of
 log returns over a bar window, e.g. 24 hourly bars = 1 day) from
@@ -98,16 +99,17 @@ sample-dependent threshold, stated explicitly rather than left implicit:
 refetching a different date range shifts the cutoffs. An absolute vol
 threshold was considered and rejected — there's no principled external
 reference level for crypto the way there might be for, say, VIX regimes
-in equities, whereas terciles always give Step 11 three comparably-sized
-buckets to run per-regime statistics on.
+in equities, whereas terciles always give the statistical-rigor layer
+three comparably-sized buckets to run per-regime statistics on.
 
 `data/time_of_day.py` runs a one-way ANOVA testing whether mean volume
 differs by hour-of-day (UTC) — the genuinely open empirical question
-flagged in Step 1, since 24/7 trading has no open/close spike to assume
-one way or the other. A significant result (p < 0.05) is evidence of a
-real regional-session pattern (Asia/Europe/US overlap); a null result is
-evidence there isn't a detectable one over the fetched history. Whichever
-way it comes out per venue directly decides Step 6's VWAP profile shape --
+flagged above ("24/7 trading — no open/close volume curve"), since 24/7
+trading has no open/close spike to assume one way or the other. A significant result
+(p < 0.05) is evidence of a real regional-session pattern (Asia/Europe/US
+overlap); a null result is evidence there isn't a detectable one over the
+fetched history. Whichever way it comes out per venue directly decides
+VWAP's profile shape --
 `data/volume_profile.py` consumes this test's result directly to build
 `algos/vwap.py`'s per-hour weights, flat or curved accordingly.
 

@@ -1,4 +1,4 @@
-# RL execution policy (Step 8)
+# RL execution policy
 
 A DQN policy trained against real historical episodes, evaluated honestly
 against TWAP and Almgren-Chriss on the same held-out test episodes.
@@ -8,15 +8,15 @@ against TWAP and Almgren-Chriss on the same held-out test episodes.
 - **State** (`observation.py`, 5-dim): remaining inventory fraction, time
   remaining fraction, spread (as a fraction of mid), order book imbalance,
   recent realized volatility — all computed from the real reconstructed
-  book (Step 2's `lob.features`/`lob.order_book`), nothing synthetic.
+  book (`lob.features`/`lob.order_book`), nothing synthetic.
 - **Action** (`action_space.py`, `Discrete(11)`): what fraction of
   *remaining* inventory to trade this step — 0%, 10%, ..., 100%. Same
   regular n_steps interval convention as TWAP/VWAP/Almgren-Chriss, for
   direct comparability.
 - **Reward** (`reward.py`): negative implementation shortfall plus an
   Almgren-Chriss-consistent risk-aversion penalty on remaining exposure.
-  This isn't just described as consistent with Step 4's fill model and
-  Step 7's risk term — it's proven: `tests/test_rl_reward.py` shows that
+  This isn't just described as consistent with the fill model and
+  Almgren-Chriss's own risk term — it's proven: `tests/test_rl_reward.py` shows that
   with `risk_aversion=0`, the sum of per-step rewards across a full
   episode equals **exactly** `-implementation_shortfall(...).total_cost`
   as computed independently by `backtest.metrics` on the same fills. The
@@ -30,9 +30,9 @@ history, split walk-forward: earliest windows train, latest windows test,
 with an explicit check that no train window's data leaks past the first
 test window's start. This part is standard.
 
-What's *not* standard, and worth internalizing before training: Step 1's
-volume/kline data is backfillable over any historical range via each
-venue's REST API, but Step 2's full order-book depth is not —
+What's *not* standard, and worth internalizing before training: this
+project's volume/kline data is backfillable over any historical range
+via each venue's REST API, but the full order-book depth is not —
 `lob.run_reconstruction --record-depth-levels` only captures data going
 forward, live, from whenever you start it. So the total real history
 available for RL episodes is bounded by how long you've been recording,
@@ -65,15 +65,15 @@ force-corrected.
 
 `train.py`'s `EpisodeRewardLogger` (a `stable_baselines3` `BaseCallback`)
 writes one row per completed training episode (`episode, total_reward`)
-to a plain CSV — Step 8's "log training curves" requirement, without
-adding tensorboard as a dependency this project doesn't otherwise need.
+to a plain CSV — logging training curves without adding tensorboard as a
+dependency this project doesn't otherwise need.
 
 ## Usage
 
 Needs `gymnasium`, `stable-baselines3`, `torch` (already in
-`requirements.txt`) — none of Steps 1-7 depend on them, so if you haven't
-installed the full requirements file yet, this is the first step that
-needs it.
+`requirements.txt`) — nothing else in this project depends on them, so if
+you haven't installed the full requirements file yet, this is the first
+piece that needs it.
 
 ```
 python3 -m lob.run_reconstruction --venues binance --record-depth-levels 50 --minutes 60
@@ -97,9 +97,9 @@ python3 -m rl.evaluate \
 `rl.evaluate` prints mean implementation shortfall (bps) for `twap`,
 `almgren_chriss`, and `rl_policy` on the identical held-out test
 episodes, and states plainly whether the RL policy under- or
-outperforms Almgren-Chriss — Step 8 asks for this to be reported
-honestly either way, consistent with how this project has handled every
-other disclosed limitation (`data/README.md`, `algos/README.md`).
+outperforms Almgren-Chriss, reported honestly either way, consistent
+with how this project has handled every other disclosed limitation
+(`data/README.md`, `algos/README.md`).
 
 ## What's tested here without gymnasium/stable-baselines3 installed
 
@@ -116,5 +116,10 @@ you to verify once you `pip install -r requirements.txt`.
 - Continuous-action RL (this project only discretizes size, not
   continuous sizing or explicit timing choice) — noted as future work in
   the top-level README.
-- Multi-venue routing for the RL policy (Step 10 adds venue routing to
-  every other algorithm; RL isn't extended to it here).
+
+## Multi-venue routing works here with zero code changes
+
+`venues/multi_venue_simulator.py` routes any `ExecutionAlgorithm`'s
+already-sliced child orders across venues, and `TrainedPolicyAlgorithm`
+is exactly that kind of algorithm — see `venues/README.md` for how the
+RL policy plugs into multi-venue routing unmodified.
