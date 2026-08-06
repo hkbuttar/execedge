@@ -156,13 +156,27 @@ calibration set's `gamma` still falls back to the same
 `permanent_to_temporary_ratio` placeholder as the literature set — only
 `eta` is genuinely empirical.
 
-**Comparing the two** (`compare_calibrations`) is itself one of the
-intended findings here: run both, look at the ratio. Given the fill model's
-book-walk `eta` reflects this project's own recorded crypto liquidity and
-the literature convention is an equities-motivated order-of-magnitude
-placeholder, a large divergence wouldn't be surprising — but that's
-exactly the kind of honest, disclosed result this project is set up to
-report rather than paper over.
+**Comparing the two** (`compare_calibrations`, exposed as a dedicated
+report by `algos.run_calibration_comparison`) is itself one of the
+intended findings here: run both, look at the ratio.
+
+```
+python3 -m algos.run_calibration_comparison \
+    --book-history lob/raw/binance_book_snapshots.jsonl \
+    --side buy \
+    --ac-volatility 0.001 --ac-risk-aversion 0.1 --ac-permanent-to-temporary-ratio 0.01 \
+    --ac-sqrt-law-coefficient 1.0 --ac-reference-participation-rate 0.1 \
+    --ac-empirical-order-sizes 0.05,0.1,0.5,1.0,2.0
+```
+
+Given the fill model's book-walk `eta` reflects this project's own
+recorded crypto liquidity and the literature convention is an
+equities-motivated order-of-magnitude placeholder, a large divergence
+wouldn't be surprising — but that's exactly the kind of honest, disclosed
+result this project is set up to report rather than paper over. See
+`RESULTS.md` for an actual run of this against real recorded data (they
+landed within 25% of each other there — roughly consistent, not the
+large divergence that would also have been a legitimate finding).
 
 **Sensitivity analysis** (`algos.almgren_chriss.sensitivity_variants`,
 ±20%) perturbs `eta` and `gamma` one at a time (not jointly), isolating

@@ -34,7 +34,7 @@ execedge/
 │                bootstrap confidence intervals, regime-stratified experiments
 ├── risk/       participation-rate limits, manual-reset-only kill switch
 ├── venues/     multi-venue routing, real fee schedules, cross-venue comparison
-└── tests/      190 tests (166 run offline in any environment; 24 need
+└── tests/      191 tests (167 run offline in any environment; 24 need
                  websocket-client installed to exercise the live reconciliation classes)
 ```
 
@@ -44,6 +44,13 @@ disclosed limitations — start there for depth on any piece:
 [algos/README.md](algos/README.md), [rl/README.md](rl/README.md),
 [backtest/README.md](backtest/README.md), [risk/README.md](risk/README.md),
 [venues/README.md](venues/README.md).
+
+[RESULTS.md](RESULTS.md) pulls all of the above together into the actual
+comparison — algorithm × regime × venue-routing × calibration-source ×
+exchange on implementation shortfall, the literature-vs-empirical
+Almgren-Chriss divergence, and RL vs. TWAP/AC — run against real recorded
+data already in this repo, with the honest gaps (what's not recorded yet)
+stated plainly rather than filled with invented numbers.
 
 ## Quickstart
 
