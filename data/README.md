@@ -107,7 +107,9 @@ flagged in Step 1, since 24/7 trading has no open/close spike to assume
 one way or the other. A significant result (p < 0.05) is evidence of a
 real regional-session pattern (Asia/Europe/US overlap); a null result is
 evidence there isn't a detectable one over the fetched history. Whichever
-way it comes out per venue directly decides Step 6's VWAP profile shape.
+way it comes out per venue directly decides Step 6's VWAP profile shape --
+`data/volume_profile.py` consumes this test's result directly to build
+`algos/vwap.py`'s per-hour weights, flat or curved accordingly.
 
 Both modules are covered by offline unit tests against synthetic data
 with known ground truth (`tests/test_regimes.py`, `tests/test_time_of_day.py`)
@@ -140,7 +142,8 @@ data/
 ├── fetch_volume.py         # CLI: pull historical klines from all venues -> data/raw/volume/
 ├── regimes.py              # rolling realized vol + calm/normal/volatile tercile classification
 ├── time_of_day.py          # hour-of-day volume ANOVA (is there a real pattern, or not)
-├── analyze_regimes.py      # CLI: runs both of the above against fetched volume data
+├── volume_profile.py       # turns the ANOVA result into VWAP's per-hour weights (flat or curved)
+├── analyze_regimes.py      # CLI: runs regimes + time-of-day against fetched volume data
 └── raw/                    # gitignored; populated by the scripts above
 ```
 
