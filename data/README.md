@@ -88,6 +88,44 @@ This project will:
 No numeric values are hardcoded yet; this section exists so Step 7 has a
 documented starting point rather than an unstated assumption.
 
+## Regime identification & the time-of-day question (Step 3)
+
+`data/regimes.py` computes rolling realized volatility (annualized std of
+log returns over a bar window, e.g. 24 hourly bars = 1 day) from
+`fetch_volume`'s output, then splits it into **calm / normal / volatile**
+terciles of that series' own empirical distribution. This is a relative,
+sample-dependent threshold, stated explicitly rather than left implicit:
+refetching a different date range shifts the cutoffs. An absolute vol
+threshold was considered and rejected — there's no principled external
+reference level for crypto the way there might be for, say, VIX regimes
+in equities, whereas terciles always give Step 11 three comparably-sized
+buckets to run per-regime statistics on.
+
+`data/time_of_day.py` runs a one-way ANOVA testing whether mean volume
+differs by hour-of-day (UTC) — the genuinely open empirical question
+flagged in Step 1, since 24/7 trading has no open/close spike to assume
+one way or the other. A significant result (p < 0.05) is evidence of a
+real regional-session pattern (Asia/Europe/US overlap); a null result is
+evidence there isn't a detectable one over the fetched history. Whichever
+way it comes out per venue directly decides Step 6's VWAP profile shape.
+
+Both modules are covered by offline unit tests against synthetic data
+with known ground truth (`tests/test_regimes.py`, `tests/test_time_of_day.py`)
+— they don't need a network connection to verify the statistics are
+computed correctly, only real data to know what BTC/USD actually does.
+
+Run after fetching enough volume history (30+ days recommended so the
+ANOVA has enough per-hour observations to be meaningful):
+
+```
+python3 -m data.fetch_volume --days 30 --interval 60
+python3 -m data.analyze_regimes --interval 60 --vol-window 24
+```
+
+Output: `data/raw/regimes/{venue}_regimes.csv` (per-bar vol + regime
+label) and `data/raw/regimes/{venue}_time_of_day.json` (hourly profile +
+ANOVA result).
+
 ## Layout
 
 ```
@@ -100,7 +138,10 @@ data/
 │   └── kraken.py
 ├── fetch_depth.py          # CLI: snapshot depth from all venues -> data/raw/depth/
 ├── fetch_volume.py         # CLI: pull historical klines from all venues -> data/raw/volume/
-└── raw/                    # gitignored; populated by the two scripts above
+├── regimes.py              # rolling realized vol + calm/normal/volatile tercile classification
+├── time_of_day.py          # hour-of-day volume ANOVA (is there a real pattern, or not)
+├── analyze_regimes.py      # CLI: runs both of the above against fetched volume data
+└── raw/                    # gitignored; populated by the scripts above
 ```
 
 ## Usage
