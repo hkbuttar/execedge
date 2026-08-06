@@ -26,6 +26,7 @@ mismatch behavior), since that needs a real feed to exercise.
 
 import json
 import threading
+import time
 import zlib
 from datetime import datetime, timezone
 
@@ -125,12 +126,28 @@ class KrakenBookReconciler:
         raw_bids = [self._raw_bids[p] for p in sorted(self._raw_bids, reverse=True)[:10]]
         return compute_checksum(raw_asks, raw_bids) == expected
 
-    def run_forever(self, on_update=None) -> None:
+    def _on_close(self, _ws, close_status_code, close_msg):
+        print(f"[kraken] websocket closed (code={close_status_code}, msg={close_msg}); will reconnect")
+
+    def _on_error(self, _ws, error):
+        print(f"[kraken] websocket error: {error}")
+
+    def run_forever(self, on_update=None, reconnect_delay: float = 2.0) -> None:
+        """Blocking; runs until the process exits (meant to be called from
+        a daemon thread via `start()`). Reconnects on any disconnect --
+        `_on_open`'s resubscribe plus the fresh `snapshot` message it
+        triggers is what actually recovers state; this loop is what makes
+        that happen automatically instead of leaving the recording
+        silently stalled after the first drop."""
         self._on_update = on_update
-        self._ws = websocket.WebSocketApp(
-            WS_URL, on_open=self._on_open, on_message=self._on_message
-        )
-        self._ws.run_forever()
+        while True:
+            self._ws = websocket.WebSocketApp(
+                WS_URL, on_open=self._on_open, on_message=self._on_message,
+                on_close=self._on_close, on_error=self._on_error,
+            )
+            self._ws.run_forever()
+            print(f"[kraken] reconnecting in {reconnect_delay}s...")
+            time.sleep(reconnect_delay)
 
     def start(self, on_update=None) -> threading.Thread:
         thread = threading.Thread(

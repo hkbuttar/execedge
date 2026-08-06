@@ -13,6 +13,7 @@ arrives, discarding the old book.
 
 import json
 import threading
+import time
 from datetime import datetime, timezone
 
 import websocket
@@ -56,12 +57,28 @@ class CoinbaseBookReconciler:
         if self._on_update:
             self._on_update(self.book)
 
-    def run_forever(self, on_update=None) -> None:
+    def _on_close(self, _ws, close_status_code, close_msg):
+        print(f"[coinbase] websocket closed (code={close_status_code}, msg={close_msg}); will reconnect")
+
+    def _on_error(self, _ws, error):
+        print(f"[coinbase] websocket error: {error}")
+
+    def run_forever(self, on_update=None, reconnect_delay: float = 2.0) -> None:
+        """Blocking; runs until the process exits (meant to be called from
+        a daemon thread via `start()`). Reconnects on any disconnect --
+        `_on_open`'s resubscribe plus the fresh `snapshot` message it
+        triggers is what actually recovers state; this loop is what makes
+        that happen automatically instead of leaving the recording
+        silently stalled after the first drop."""
         self._on_update = on_update
-        self._ws = websocket.WebSocketApp(
-            WS_URL, on_open=self._on_open, on_message=self._on_message
-        )
-        self._ws.run_forever()
+        while True:
+            self._ws = websocket.WebSocketApp(
+                WS_URL, on_open=self._on_open, on_message=self._on_message,
+                on_close=self._on_close, on_error=self._on_error,
+            )
+            self._ws.run_forever()
+            print(f"[coinbase] reconnecting in {reconnect_delay}s...")
+            time.sleep(reconnect_delay)
 
     def start(self, on_update=None) -> threading.Thread:
         thread = threading.Thread(
