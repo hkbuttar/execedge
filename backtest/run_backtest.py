@@ -15,20 +15,23 @@ purpose (see backtest/fill_model.py) -- pass 0.0 to see pure book-walk
 behavior with no assumed impact; Step 7 is where literature/empirical
 values for these get produced.
 
-Only algorithm available right now is the naive single-shot baseline;
-Steps 5-7 add TWAP/VWAP/Almgren-Chriss to choose from here.
+Algorithms available: `naive` (single-shot baseline, exercises the
+harness only) and `twap` (Step 5's control -- equal slices at regular
+intervals, pass --n-slices). VWAP/Almgren-Chriss (Steps 6-7) will add
+more choices here.
 """
 
 import argparse
 from datetime import timedelta
 
+from algos.twap import TWAPAlgorithm
 from backtest.algorithm import NaiveMarketOrderAlgorithm
 from backtest.book_history import BookHistoryReader
 from backtest.fill_model import FillModel
 from backtest.order import ParentOrder
 from backtest.simulator import OrderSlicingSimulator
 
-ALGORITHMS = {"naive": NaiveMarketOrderAlgorithm}
+ALGORITHMS = {"naive": NaiveMarketOrderAlgorithm, "twap": TWAPAlgorithm}
 
 
 def main():
@@ -42,6 +45,7 @@ def main():
     )
     parser.add_argument("--duration-seconds", type=float, required=True)
     parser.add_argument("--algorithm", choices=list(ALGORITHMS), default="naive")
+    parser.add_argument("--n-slices", type=int, default=10, help="only used by --algorithm twap")
     parser.add_argument("--temporary-impact-coef", type=float, required=True)
     parser.add_argument("--permanent-impact-coef", type=float, required=True)
     args = parser.parse_args()
@@ -64,7 +68,7 @@ def main():
         permanent_impact_coef=args.permanent_impact_coef,
     )
     simulator = OrderSlicingSimulator(book_history, fill_model)
-    algorithm = ALGORITHMS[args.algorithm]()
+    algorithm = TWAPAlgorithm(args.n_slices) if args.algorithm == "twap" else NaiveMarketOrderAlgorithm()
 
     result = simulator.run(parent, algorithm)
     s = result.shortfall

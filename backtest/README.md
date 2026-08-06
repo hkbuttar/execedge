@@ -89,8 +89,8 @@ backtest/
 `NaiveMarketOrderAlgorithm` (dumps the whole parent order as one child
 order at start_time) is a deliberately naive baseline that exists only to
 exercise this harness end to end — maximum market impact, zero timing
-risk. It is not TWAP. Step 5 implements TWAP as the actual control
-algorithm this project benchmarks against.
+risk. It is not TWAP. TWAP (`algos/twap.py`, Step 5) is the actual
+control algorithm this project benchmarks against — see `algos/README.md`.
 
 ## Prerequisite: a recorded book history
 
@@ -121,6 +121,17 @@ python3 -m backtest.run_backtest \
   it matters.
 - `ExecutionAlgorithm.slice()` is static/up-front; no algorithm here
   re-slices dynamically based on fills so far.
+- The simulator replays independently-recorded real snapshots and does
+  not deplete a level for a later child order just because an earlier
+  one consumed it at a different timestamp — each timestamp's snapshot
+  is real ground truth as recorded, not adjusted for the hypothetical
+  order's own prior fills elsewhere in time. This can make time-sliced
+  algorithms (TWAP, and later VWAP/AC) look better than they would in
+  reality if the recorded history is coarse enough that the same
+  liquidity appears to "reappear" verbatim across timestamps — see
+  `algos/README.md`'s TWAP section and `tests/test_algorithm_comparison.py`
+  for a concrete illustration of the effect and why it matters less
+  against a real, finely-sampled recording.
 - Tested entirely offline against synthetic book histories with known
   ground truth (`tests/test_fill_model.py`, `tests/test_metrics.py`,
   `tests/test_book_history.py`, `tests/test_simulator.py`) — running it
