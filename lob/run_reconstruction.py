@@ -7,6 +7,13 @@ it yourself for however long you want a feature history for:
 
     python3 -m lob.run_reconstruction --venues binance coinbase kraken --minutes 30
 
+Pass --record-depth-levels N (e.g. 50) to also persist the top-N real
+bid/ask levels per update to `{venue}_book_snapshots.jsonl`. This is what
+backtest/book_history.py replays against -- derived features alone (mid/
+spread/imbalance) aren't enough to fill a hypothetical child order, since
+that needs the actual resting size at each price level. Off by default
+since it's a heavier per-line payload than the feature-only file.
+
 Ctrl-C to stop; each venue's reconciler runs in its own thread.
 """
 
@@ -31,10 +38,16 @@ RECONCILERS = {
 }
 
 
-def make_writer(venue: str, out_dir: str):
+def make_writer(venue: str, out_dir: str, record_depth_levels: int = 0):
     path = os.path.join(out_dir, f"{venue}_features.jsonl")
     f = open(path, "a")
     vol_tracker = RealizedVolTracker()
+
+    depth_f = None
+    depth_path = None
+    if record_depth_levels > 0:
+        depth_path = os.path.join(out_dir, f"{venue}_book_snapshots.jsonl")
+        depth_f = open(depth_path, "a")
 
     def on_update(book):
         snapshot = compute_features(book, vol_tracker)
@@ -43,7 +56,18 @@ def make_writer(venue: str, out_dir: str):
         f.write(json.dumps(row) + "\n")
         f.flush()
 
-    return on_update, path
+        if depth_f is not None:
+            depth_row = {
+                "venue": book.venue,
+                "symbol": book.symbol,
+                "timestamp": book.last_update_time.isoformat() if book.last_update_time else None,
+                "bids": book.top_levels("bid", record_depth_levels),
+                "asks": book.top_levels("ask", record_depth_levels),
+            }
+            depth_f.write(json.dumps(depth_row) + "\n")
+            depth_f.flush()
+
+    return on_update, path, depth_path
 
 
 def main():
@@ -51,6 +75,10 @@ def main():
     parser.add_argument("--venues", nargs="+", default=list(RECONCILERS), choices=list(RECONCILERS))
     parser.add_argument("--minutes", type=float, default=None, help="stop after N minutes (default: run until Ctrl-C)")
     parser.add_argument("--out-dir", default=OUT_DIR)
+    parser.add_argument(
+        "--record-depth-levels", type=int, default=0,
+        help="also persist top-N real bid/ask levels per update, needed for backtest/ replay (0 = off)",
+    )
     args = parser.parse_args()
 
     os.makedirs(args.out_dir, exist_ok=True)
@@ -58,8 +86,10 @@ def main():
     threads = []
     for venue in args.venues:
         reconciler = RECONCILERS[venue](SYMBOLS[venue])
-        on_update, path = make_writer(venue, args.out_dir)
+        on_update, path, depth_path = make_writer(venue, args.out_dir, args.record_depth_levels)
         print(f"[{venue}] connecting, writing features -> {path}")
+        if depth_path:
+            print(f"[{venue}] also recording depth snapshots -> {depth_path}")
         threads.append(reconciler.start(on_update=on_update))
 
     if args.minutes is not None:
