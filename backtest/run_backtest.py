@@ -24,6 +24,13 @@ profile if Step 3's time-of-day test found no real pattern for this
 venue), and `ac` (Step 7 -- Almgren-Chriss closed-form trajectory, pass
 --ac-calibration literature|empirical; see algos/README.md for what each
 means and the disclosed gap in the literature source).
+
+Step 9's risk layer (risk/) is optional and off by default:
+--participation-limit caps each child order against real volume
+(risk/README.md on the proration caveat), and --kill-switch-max-vol /
+--kill-switch-max-shortfall-bps halt all remaining child orders for the
+rest of the run once tripped -- manual reset only, there's no
+auto-resume.
 """
 
 import argparse
@@ -42,6 +49,10 @@ from backtest.fill_model import FillModel
 from backtest.order import ParentOrder
 from backtest.simulator import OrderSlicingSimulator
 from data.volume_profile import build_volume_profile
+from risk.kill_switch import KillSwitch
+from risk.participation_limit import ParticipationLimiter
+from risk.triggers import shortfall_trigger, volatility_trigger
+from risk.volume_lookup import HistoricalVolumeLookup
 
 ALGORITHMS = {
     "naive": NaiveMarketOrderAlgorithm,
@@ -86,6 +97,19 @@ def main():
         "--ac-empirical-order-sizes", default=None,
         help="empirical calibration only -- comma-separated sizes to sample, e.g. 0.1,0.5,1.0,2.0,5.0",
     )
+
+    parser.add_argument(
+        "--participation-limit", type=float, default=None,
+        help="cap each child order at this fraction (0,1] of real historical volume in its window; off by default",
+    )
+    parser.add_argument(
+        "--kill-switch-max-vol", type=float, default=None,
+        help="halt all remaining child orders if realized volatility exceeds this",
+    )
+    parser.add_argument(
+        "--kill-switch-max-shortfall-bps", type=float, default=None,
+        help="halt all remaining child orders if cumulative shortfall exceeds this many bps",
+    )
     args = parser.parse_args()
 
     book_history = BookHistoryReader(args.book_history)
@@ -105,7 +129,37 @@ def main():
         temporary_impact_coef=args.temporary_impact_coef,
         permanent_impact_coef=args.permanent_impact_coef,
     )
-    simulator = OrderSlicingSimulator(book_history, fill_model)
+
+    participation_limiter = None
+    if args.participation_limit is not None:
+        volume_csv = args.volume_csv or os.path.join(
+            "data", "raw", "volume", f"{book_history.venue}_{book_history.symbol}_{args.volume_interval}m.csv"
+        )
+        if not os.path.exists(volume_csv):
+            raise SystemExit(
+                f"--participation-limit needs real volume data at {volume_csv} -- "
+                f"run `python3 -m data.fetch_volume` first, or pass --volume-csv explicitly"
+            )
+        volume_df = pd.read_csv(volume_csv, parse_dates=["open_time"])
+        volume_lookup = HistoricalVolumeLookup(volume_df, bar_seconds=args.volume_interval * 60)
+        participation_limiter = ParticipationLimiter(args.participation_limit, volume_lookup)
+        print(f"participation limit: {args.participation_limit:.4%} of real volume per child order window")
+
+    kill_switch = None
+    kill_switch_triggers = []
+    if args.kill_switch_max_vol is not None or args.kill_switch_max_shortfall_bps is not None:
+        kill_switch = KillSwitch()
+        if args.kill_switch_max_vol is not None:
+            kill_switch_triggers.append(volatility_trigger(args.kill_switch_max_vol))
+        if args.kill_switch_max_shortfall_bps is not None:
+            kill_switch_triggers.append(shortfall_trigger(args.kill_switch_max_shortfall_bps))
+
+    simulator = OrderSlicingSimulator(
+        book_history, fill_model,
+        participation_limiter=participation_limiter,
+        kill_switch=kill_switch,
+        kill_switch_triggers=kill_switch_triggers,
+    )
 
     if args.algorithm == "twap":
         algorithm = TWAPAlgorithm(args.n_slices)
@@ -174,6 +228,9 @@ def main():
 
     result = simulator.run(parent, algorithm)
     s = result.shortfall
+
+    if result.halted_at is not None and kill_switch is not None:
+        print(f"KILL SWITCH TRIPPED at {result.halted_at}: {kill_switch.event.reason}")
 
     print(f"{parent.side} {parent.quantity} {parent.symbol} on {parent.venue}")
     print(f"arrival price: {result.arrival_price}  end price: {result.end_price}")

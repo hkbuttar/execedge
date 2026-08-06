@@ -86,6 +86,14 @@ backtest/
 └── run_backtest.py    # CLI
 ```
 
+`OrderSlicingSimulator` optionally takes a `participation_limiter` and/or
+`kill_switch` (+ `kill_switch_triggers`) — Step 9's risk layer, see
+`risk/README.md`. Both are cross-cutting: applied to whatever algorithm's
+child orders are being walked through, at each child order's own point in
+real time, since that's the only place in this project a genuinely
+real-time control can hook in given `ExecutionAlgorithm.slice()`'s
+static/up-front design (see below). Off by default.
+
 `NaiveMarketOrderAlgorithm` (dumps the whole parent order as one child
 order at start_time) is a deliberately naive baseline that exists only to
 exercise this harness end to end — maximum market impact, zero timing
