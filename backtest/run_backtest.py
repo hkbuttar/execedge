@@ -17,11 +17,13 @@ values for these get produced.
 
 Algorithms available: `naive` (single-shot baseline, exercises the
 harness only), `twap` (Step 5's control -- equal slices at regular
-intervals, pass --n-slices), and `vwap` (Step 6 -- slices proportional to
-a real historical volume curve, needs --volume-csv from
+intervals, pass --n-slices), `vwap` (Step 6 -- slices proportional to a
+real historical volume curve, needs --volume-csv from
 `data.fetch_volume`'s output; falls back to a flat/TWAP-equivalent
 profile if Step 3's time-of-day test found no real pattern for this
-venue). Almgren-Chriss (Step 7) will add another choice here.
+venue), and `ac` (Step 7 -- Almgren-Chriss closed-form trajectory, pass
+--ac-calibration literature|empirical; see algos/README.md for what each
+means and the disclosed gap in the literature source).
 """
 
 import argparse
@@ -30,6 +32,8 @@ from datetime import timedelta
 
 import pandas as pd
 
+from algos.almgren_chriss import AlmgrenChrissAlgorithm
+from algos.impact_calibration import build_empirical_params, literature_coefficients
 from algos.twap import TWAPAlgorithm
 from algos.vwap import VWAPAlgorithm
 from backtest.algorithm import NaiveMarketOrderAlgorithm
@@ -39,7 +43,12 @@ from backtest.order import ParentOrder
 from backtest.simulator import OrderSlicingSimulator
 from data.volume_profile import build_volume_profile
 
-ALGORITHMS = {"naive": NaiveMarketOrderAlgorithm, "twap": TWAPAlgorithm, "vwap": VWAPAlgorithm}
+ALGORITHMS = {
+    "naive": NaiveMarketOrderAlgorithm,
+    "twap": TWAPAlgorithm,
+    "vwap": VWAPAlgorithm,
+    "ac": AlmgrenChrissAlgorithm,
+}
 
 
 def main():
@@ -53,7 +62,7 @@ def main():
     )
     parser.add_argument("--duration-seconds", type=float, required=True)
     parser.add_argument("--algorithm", choices=list(ALGORITHMS), default="naive")
-    parser.add_argument("--n-slices", type=int, default=10, help="used by --algorithm twap/vwap")
+    parser.add_argument("--n-slices", type=int, default=10, help="used by --algorithm twap/vwap/ac")
     parser.add_argument(
         "--volume-csv", default=None,
         help="data.fetch_volume output CSV, required for --algorithm vwap "
@@ -63,6 +72,20 @@ def main():
     parser.add_argument("--time-of-day-alpha", type=float, default=0.05)
     parser.add_argument("--temporary-impact-coef", type=float, required=True)
     parser.add_argument("--permanent-impact-coef", type=float, required=True)
+
+    parser.add_argument("--ac-calibration", choices=["literature", "empirical"], default=None)
+    parser.add_argument("--ac-volatility", type=float, default=None, help="sigma, price units per sqrt(second)")
+    parser.add_argument("--ac-risk-aversion", type=float, default=None, help="lambda >= 0; 0 reduces exactly to TWAP")
+    parser.add_argument("--ac-permanent-to-temporary-ratio", type=float, default=None)
+    parser.add_argument(
+        "--ac-sqrt-law-coefficient", type=float, default=None,
+        help="literature calibration only -- see algos/README.md's disclosed-limitation note",
+    )
+    parser.add_argument("--ac-reference-participation-rate", type=float, default=None, help="literature calibration only")
+    parser.add_argument(
+        "--ac-empirical-order-sizes", default=None,
+        help="empirical calibration only -- comma-separated sizes to sample, e.g. 0.1,0.5,1.0,2.0,5.0",
+    )
     args = parser.parse_args()
 
     book_history = BookHistoryReader(args.book_history)
@@ -100,6 +123,52 @@ def main():
         shape = "flat (no significant time-of-day effect)" if profile.is_flat else "curved (real hour-of-day pattern)"
         print(f"VWAP profile: {shape}, p={profile.tod_test['p_value']:.4f}")
         algorithm = VWAPAlgorithm(args.n_slices, profile.weights)
+    elif args.algorithm == "ac":
+        missing = [
+            name for name, val in [
+                ("--ac-calibration", args.ac_calibration),
+                ("--ac-volatility", args.ac_volatility),
+                ("--ac-risk-aversion", args.ac_risk_aversion),
+                ("--ac-permanent-to-temporary-ratio", args.ac_permanent_to_temporary_ratio),
+            ] if val is None
+        ]
+        if missing:
+            raise SystemExit(f"--algorithm ac requires: {', '.join(missing)}")
+
+        if args.ac_calibration == "literature":
+            if args.ac_sqrt_law_coefficient is None or args.ac_reference_participation_rate is None:
+                raise SystemExit(
+                    "--ac-calibration literature also requires --ac-sqrt-law-coefficient "
+                    "and --ac-reference-participation-rate"
+                )
+            params = literature_coefficients(
+                volatility=args.ac_volatility,
+                risk_aversion=args.ac_risk_aversion,
+                sqrt_law_coefficient=args.ac_sqrt_law_coefficient,
+                reference_participation_rate=args.ac_reference_participation_rate,
+                permanent_to_temporary_ratio=args.ac_permanent_to_temporary_ratio,
+            )
+            print(
+                f"AC literature calibration: eta={params.temporary_impact:.6g} "
+                f"gamma={params.permanent_impact:.6g} (see algos/README.md's disclosed-limitation note)"
+            )
+        else:
+            if args.ac_empirical_order_sizes is None:
+                raise SystemExit("--ac-calibration empirical also requires --ac-empirical-order-sizes")
+            order_sizes = [float(s) for s in args.ac_empirical_order_sizes.split(",")]
+            params, estimate = build_empirical_params(
+                book_history, order_sizes, args.side,
+                volatility=args.ac_volatility,
+                risk_aversion=args.ac_risk_aversion,
+                permanent_to_temporary_ratio=args.ac_permanent_to_temporary_ratio,
+            )
+            print(
+                f"AC empirical calibration: eta={params.temporary_impact:.6g} "
+                f"gamma={params.permanent_impact:.6g} (n_samples={estimate.n_samples}, "
+                f"r_squared={estimate.r_squared:.4f}; gamma is still the placeholder ratio -- "
+                f"see algos/README.md)"
+            )
+        algorithm = AlmgrenChrissAlgorithm(args.n_slices, params)
     else:
         algorithm = NaiveMarketOrderAlgorithm()
 

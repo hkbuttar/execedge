@@ -39,6 +39,19 @@ class BookHistoryReader:
     def end_time(self) -> datetime:
         return self._timestamps[-1]
 
+    @property
+    def timestamps(self) -> list[datetime]:
+        return list(self._timestamps)
+
+    def __len__(self) -> int:
+        return len(self._records)
+
+    def book_at_index(self, idx: int) -> OrderBook:
+        row = self._records[idx]
+        book = OrderBook(row["venue"], row["symbol"])
+        book.load_snapshot(bids=row["bids"], asks=row["asks"], timestamp=self._timestamps[idx])
+        return book
+
     def book_at_or_before(self, timestamp: datetime) -> OrderBook:
         """Real book state as of the latest recorded snapshot at or before
         `timestamp`. Raises if `timestamp` is earlier than any recorded
@@ -50,7 +63,4 @@ class BookHistoryReader:
                 f"no recorded book snapshot at or before {timestamp} "
                 f"(history starts at {self.start_time})"
             )
-        row = self._records[idx]
-        book = OrderBook(row["venue"], row["symbol"])
-        book.load_snapshot(bids=row["bids"], asks=row["asks"], timestamp=self._timestamps[idx])
-        return book
+        return self.book_at_index(idx)

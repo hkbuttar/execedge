@@ -72,8 +72,124 @@ python3 -m backtest.run_backtest \
 (`--volume-csv` defaults to `data/raw/volume/{venue}_{symbol}_{volume-interval}m.csv`,
 matching `data.fetch_volume`'s default output naming.)
 
+## Almgren-Chriss (`almgren_chriss.py`, `impact_calibration.py`) — Step 7
+
+Citation: Almgren, R., Chriss, N. (2000). "Optimal Execution of Portfolio
+Transactions." *Journal of Risk*, 3, 5-39. Closed-form optimal
+remaining-holdings trajectory:
+
+```
+x_j = X * sinh(kappa*(T - t_j)) / sinh(kappa*T)
+kappa = arccosh(1 + tau^2 * kappa_tilde^2 / 2) / tau
+kappa_tilde^2 = risk_aversion * sigma^2 / (eta - 0.5*gamma*tau)
+```
+
+These formulas were cross-checked against two independent sources before
+implementing (not taken purely from memory), given how central this
+equation is to the whole comparison. `tests/test_almgren_chriss.py`
+verifies the two properties that matter most:
+
+- **`risk_aversion = 0` produces an *exactly* identical child order
+  schedule to `TWAPAlgorithm`** (same quantities, same timestamps) —
+  TWAP is the risk-neutral special case of Almgren-Chriss, not just a
+  separately-simpler strategy. This is checked to floating-point
+  precision, not approximately.
+- **`risk_aversion > 0` front-loads execution** (earlier slices larger
+  than later ones), trading more market impact for less exposure to
+  price risk over the remaining horizon — the model's whole point.
+
+The model has a real well-posedness constraint worth knowing before you
+hit it: `eta - 0.5*gamma*tau` must be positive, or there's no real
+solution. If you get a `ValueError` about this, either use more slices
+(smaller `tau`) or reduce `permanent_to_temporary_ratio` — this is the
+model correctly rejecting an inconsistent combination of your own inputs,
+not a bug.
+
+### Dual calibration — and a disclosed gap in the literature source
+
+**Literature calibration** is supposed to use published, equities-derived
+impact coefficients (Step 1's plan). In practice: the two standard
+citable sources — Almgren-Chriss's own 2000 paper's worked numerical
+example, and Almgren/Thum/Hauptmann/Li (2005) "Direct Estimation of
+Equity Market Impact," which fits coefficients to real Citigroup order
+data — are both only available to this project as PDFs, and this
+environment has no working PDF-to-text extraction (no poppler/pdftotext,
+no pypdf/PyMuPDF, and fetching each PDF returned only compressed internal
+stream structure rather than readable text). Two independent attempts to
+pull the papers' exact fitted digits did not succeed.
+
+Rather than fabricate specific-looking decimal coefficients that can't be
+verified, `literature_coefficients()` uses the square-root-law functional
+form instead (`cost ~ Y * sigma * sqrt(participation_rate)`) — the one
+claim from this literature safe to state without an exact citation:
+independent studies across markets converge on `Y` being order-1
+(roughly 0.5-1.5), not one precisely-sourced number, and it's the same
+form already flagged in `data/README.md` as validated directly on Bitcoin
+metaorders (Donier & Bonart, 2015). Every input to this function —
+`sqrt_law_coefficient`, `reference_participation_rate`,
+`permanent_to_temporary_ratio` — has **no default**, same discipline as
+`backtest/fill_model.py`'s impact coefficients: pick 1.0 as the explicit
+"textbook order-of-magnitude" convention if you have nothing better, but
+know that's what it is. **If you have access to either paper's actual
+fitted numbers, replace this function's convention with them** — that's
+a strict improvement over what's here now.
+
+**Empirical calibration** (`estimate_empirical_temporary_impact`) is
+genuinely asset-class-native: it regresses real book-walk slippage
+(via `backtest.fill_model` with impact forced to zero — pure arithmetic
+against real recorded depth) against participation rate, across many
+real snapshots and candidate order sizes, fitting `eta` by ordinary least
+squares through the origin (consistent with linear `h(v) = eta*v`).
+`tests/test_impact_calibration.py` proves this recovers a known-planted
+linear impact law to `1e-9` relative precision against a constructed
+book, and separately confirms the plumbing (`estimate_empirical_temporary_impact_per_regime`)
+correctly splits samples by Step 3's calm/normal/volatile labels via a
+timestamp join (`pandas.merge_asof`) against `data/analyze_regimes.py`'s
+output.
+
+**It cannot estimate permanent impact**, and this is a real limitation,
+not an oversight: observing permanent impact needs real subsequent price
+drift attributable to an actual trade of known size — that needs real
+trade prints. This project's data pipeline (Steps 1-2) records order book
+*depth*, not trade executions, so that data doesn't exist here. The
+"empirical" calibration set's `gamma` still falls back to the same
+`permanent_to_temporary_ratio` placeholder as the literature set — only
+`eta` is genuinely empirical.
+
+**Comparing the two** (`compare_calibrations`) is itself one of Step 7's
+intended findings: run both, look at the ratio. Given the fill model's
+book-walk `eta` reflects this project's own recorded crypto liquidity and
+the literature convention is an equities-motivated order-of-magnitude
+placeholder, a large divergence wouldn't be surprising — but that's
+exactly the kind of honest, disclosed result this project is set up to
+report rather than paper over.
+
+**Sensitivity analysis** (`algos.almgren_chriss.sensitivity_variants`,
+±20%) perturbs `eta` and `gamma` one at a time (not jointly), isolating
+which of the two calibrated coefficients the resulting trajectory is more
+sensitive to.
+
+```
+# literature calibration
+python3 -m backtest.run_backtest \
+    --book-history lob/raw/binance_book_snapshots.jsonl \
+    --side buy --quantity 1.0 --algorithm ac --n-slices 10 \
+    --start-offset-seconds 0 --duration-seconds 300 \
+    --temporary-impact-coef 0.0 --permanent-impact-coef 0.0 \
+    --ac-calibration literature --ac-volatility 0.02 --ac-risk-aversion 0.3 \
+    --ac-permanent-to-temporary-ratio 0.01 --ac-sqrt-law-coefficient 1.0 \
+    --ac-reference-participation-rate 0.1
+
+# empirical calibration -- eta estimated from the same recorded book history
+python3 -m backtest.run_backtest \
+    --book-history lob/raw/binance_book_snapshots.jsonl \
+    --side buy --quantity 1.0 --algorithm ac --n-slices 10 \
+    --start-offset-seconds 0 --duration-seconds 300 \
+    --temporary-impact-coef 0.0 --permanent-impact-coef 0.0 \
+    --ac-calibration empirical --ac-volatility 0.02 --ac-risk-aversion 0.3 \
+    --ac-permanent-to-temporary-ratio 0.01 --ac-empirical-order-sizes 0.1,0.5,1.0,2.0,5.0
+```
+
 ## Not yet implemented
 
-- **Almgren-Chriss** (Step 7): closed-form optimal trajectory, dual-
-  calibrated (literature vs. empirically-estimated impact coefficients,
-  compared directly).
+- An RL execution policy (Step 8) to compare against all of the above.
