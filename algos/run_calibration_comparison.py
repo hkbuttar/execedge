@@ -23,7 +23,7 @@ whatever book history you point this at.
 import argparse
 
 from algos.impact_calibration import build_empirical_params, compare_calibrations, literature_coefficients
-from backtest.book_history import BookHistoryReader
+from backtest.book_history import open_book_history
 
 
 def main():
@@ -38,7 +38,7 @@ def main():
     parser.add_argument("--ac-empirical-order-sizes", required=True)
     args = parser.parse_args()
 
-    book_history = BookHistoryReader(args.book_history)
+    book_history = open_book_history(args.book_history)
 
     lit_params = literature_coefficients(
         volatility=args.ac_volatility, risk_aversion=args.ac_risk_aversion,

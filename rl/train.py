@@ -29,7 +29,7 @@ import os
 from stable_baselines3 import DQN
 from stable_baselines3.common.callbacks import BaseCallback
 
-from backtest.book_history import BookHistoryReader
+from backtest.book_history import open_book_history
 from rl.env import ExecutionEnv
 from rl.episodes import enumerate_episode_windows, train_test_split_windows
 
@@ -82,7 +82,7 @@ def main():
     parser.add_argument("--reward-log-out", default="rl/raw/training_rewards.csv")
     args = parser.parse_args()
 
-    book_history = BookHistoryReader(args.book_history)
+    book_history = open_book_history(args.book_history)
     windows = enumerate_episode_windows(book_history, args.episode_duration_seconds, args.stride_seconds)
     train_windows, test_windows = train_test_split_windows(windows, args.train_fraction)
     print(f"{len(windows)} total episode windows -> {len(train_windows)} train / {len(test_windows)} test")

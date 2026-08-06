@@ -1,16 +1,37 @@
-# Local equivalent of render.yaml's two services, for testing the
-# containerized build before pushing to Render.
+# Local equivalent of render.yaml's services, for testing the
+# containerized build (and the DB-backed book history path) before
+# pushing to Render.
 #
 #   docker compose up --build
 #
 # Backend: http://localhost:8000 (docs at /docs)
 # Frontend: http://localhost:5006/app
+# Postgres: localhost:5434 (mapped off 5432/5433 to avoid clashing with a
+#   locally-installed or other project's Postgres) -- db/schema.py's table
+#   is created lazily on first use (backend/frontend calling
+#   BookHistoryReader.from_db, or lob.run_reconstruction --database-url),
+#   not by this file.
 services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: execedge
+      POSTGRES_PASSWORD: execedge
+      POSTGRES_DB: execedge
+    ports:
+      - "5434:5432"
+    volumes:
+      - execedge-db-data:/var/lib/postgresql/data
+
   backend:
     build: .
     command: uvicorn backend.main:app --host 0.0.0.0 --port 8000
     ports:
       - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://execedge:execedge@db:5432/execedge
+    depends_on:
+      - db
 
   frontend:
     build: .
@@ -19,3 +40,10 @@ services:
       --allow-websocket-origin=localhost:5006
     ports:
       - "5006:5006"
+    environment:
+      DATABASE_URL: postgresql://execedge:execedge@db:5432/execedge
+    depends_on:
+      - db
+
+volumes:
+  execedge-db-data:

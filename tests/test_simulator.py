@@ -35,7 +35,7 @@ def test_naive_algorithm_end_to_end_no_impact(tmp_path):
             make_row(START + timedelta(minutes=5), 99.0, 100.0),
         ],
     )
-    book_history = BookHistoryReader(str(path))
+    book_history = BookHistoryReader.from_file(str(path))
     fill_model = FillModel(temporary_impact_coef=0.0, permanent_impact_coef=0.0)
     simulator = OrderSlicingSimulator(book_history, fill_model)
 
@@ -62,7 +62,7 @@ def test_naive_algorithm_partial_fill_charges_opportunity_cost(tmp_path):
             make_row(START + timedelta(minutes=5), 99.0, 102.0),  # price moved against a buy
         ],
     )
-    book_history = BookHistoryReader(str(path))
+    book_history = BookHistoryReader.from_file(str(path))
     fill_model = FillModel(temporary_impact_coef=0.0, permanent_impact_coef=0.0)
     simulator = OrderSlicingSimulator(book_history, fill_model)
 

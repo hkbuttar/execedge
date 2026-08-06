@@ -27,7 +27,7 @@ from stable_baselines3 import DQN
 from algos.almgren_chriss import AlmgrenChrissAlgorithm
 from algos.impact_calibration import build_empirical_params, literature_coefficients
 from algos.twap import TWAPAlgorithm
-from backtest.book_history import BookHistoryReader
+from backtest.book_history import open_book_history
 from backtest.fill_model import FillModel
 from backtest.order import ParentOrder
 from backtest.simulator import OrderSlicingSimulator
@@ -84,7 +84,7 @@ def main():
     parser.add_argument("--ac-empirical-order-sizes", default=None)
     args = parser.parse_args()
 
-    book_history = BookHistoryReader(args.book_history)
+    book_history = open_book_history(args.book_history)
     test_windows = load_test_windows(args.model)
     if not test_windows:
         raise SystemExit("test-windows file is empty")

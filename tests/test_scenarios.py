@@ -24,7 +24,7 @@ def write_history(path, venue="binance", symbol="BTCUSD", n=20, step=5):
 def test_naive_and_twap_always_included(tmp_path):
     path = tmp_path / "history.jsonl"
     write_history(path)
-    book_history = BookHistoryReader(str(path))
+    book_history = BookHistoryReader.from_file(str(path))
     scenarios = build_algorithm_scenarios(
         book_history, FillModel(0.0, 0.0), "buy", 1.0, n_slices=5, quiet=True
     )
@@ -35,7 +35,7 @@ def test_naive_and_twap_always_included(tmp_path):
 def test_vwap_included_when_volume_csv_given(tmp_path):
     path = tmp_path / "history.jsonl"
     write_history(path)
-    book_history = BookHistoryReader(str(path))
+    book_history = BookHistoryReader.from_file(str(path))
 
     volume_csv = tmp_path / "volume.csv"
     pd.DataFrame({
@@ -53,7 +53,7 @@ def test_vwap_included_when_volume_csv_given(tmp_path):
 def test_vwap_excluded_when_no_volume_data(tmp_path):
     path = tmp_path / "history.jsonl"
     write_history(path)
-    book_history = BookHistoryReader(str(path))
+    book_history = BookHistoryReader.from_file(str(path))
     scenarios = build_algorithm_scenarios(
         book_history, FillModel(0.0, 0.0), "buy", 1.0, n_slices=5,
         volume_csv=str(tmp_path / "does_not_exist.csv"), quiet=True,
@@ -64,7 +64,7 @@ def test_vwap_excluded_when_no_volume_data(tmp_path):
 def test_ac_scenarios_excluded_without_base_ac_args(tmp_path):
     path = tmp_path / "history.jsonl"
     write_history(path)
-    book_history = BookHistoryReader(str(path))
+    book_history = BookHistoryReader.from_file(str(path))
     scenarios = build_algorithm_scenarios(
         book_history, FillModel(0.0, 0.0), "buy", 1.0, n_slices=5, quiet=True
     )
@@ -75,7 +75,7 @@ def test_ac_scenarios_excluded_without_base_ac_args(tmp_path):
 def test_ac_literature_included_with_full_args(tmp_path):
     path = tmp_path / "history.jsonl"
     write_history(path)
-    book_history = BookHistoryReader(str(path))
+    book_history = BookHistoryReader.from_file(str(path))
     scenarios = build_algorithm_scenarios(
         book_history, FillModel(0.0, 0.0), "buy", 1.0, n_slices=5,
         ac_volatility=0.001, ac_risk_aversion=0.1, ac_permanent_to_temporary_ratio=0.001,
@@ -89,7 +89,7 @@ def test_ac_literature_included_with_full_args(tmp_path):
 def test_ac_empirical_included_with_order_sizes(tmp_path):
     path = tmp_path / "history.jsonl"
     write_history(path)
-    book_history = BookHistoryReader(str(path))
+    book_history = BookHistoryReader.from_file(str(path))
     scenarios = build_algorithm_scenarios(
         book_history, FillModel(0.0, 0.0), "buy", 1.0, n_slices=5,
         ac_volatility=0.001, ac_risk_aversion=0.1, ac_permanent_to_temporary_ratio=0.001,
@@ -102,7 +102,7 @@ def test_ac_empirical_included_with_order_sizes(tmp_path):
 def test_scenario_callables_produce_a_finite_bps_number(tmp_path):
     path = tmp_path / "history.jsonl"
     write_history(path, n=20, step=30)  # spans 10 minutes
-    book_history = BookHistoryReader(str(path))
+    book_history = BookHistoryReader.from_file(str(path))
     scenarios = build_algorithm_scenarios(
         book_history, FillModel(0.0, 0.0), "buy", 1.0, n_slices=5, quiet=True
     )

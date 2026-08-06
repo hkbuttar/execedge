@@ -19,7 +19,7 @@ from algos.impact_calibration import build_empirical_params, compare_calibration
 from algos.twap import TWAPAlgorithm
 from algos.vwap import VWAPAlgorithm
 from backtest.algorithm import NaiveMarketOrderAlgorithm
-from backtest.book_history import BookHistoryReader
+from backtest.book_history import BookHistoryReader, open_book_history
 from backtest.experiment import is_robust, run_bootstrap_experiment, window_regime_labels
 from backtest.fill_model import FillModel
 from backtest.order import ParentOrder
@@ -100,7 +100,7 @@ def _run_single_backtest(req):
     """Shared setup for run_backtest and run_backtest_trajectory -- both
     need the same parent order + algorithm + simulator run, just expose
     different levels of detail from the same BacktestResult."""
-    book_history = BookHistoryReader(req.book_history_path)
+    book_history = open_book_history(req.book_history_path)
     start_time = book_history.start_time + timedelta(seconds=req.start_offset_seconds)
     end_time = start_time + timedelta(seconds=req.duration_seconds)
     parent = ParentOrder(
@@ -158,7 +158,7 @@ def run_backtest_trajectory(req) -> dict:
 
 
 def run_experiment(req) -> list:
-    book_history = BookHistoryReader(req.book_history_path)
+    book_history = open_book_history(req.book_history_path)
     windows = enumerate_episode_windows(book_history, req.episode_duration_seconds, req.stride_seconds)
     if len(windows) < 2:
         raise ValueError(f"only {len(windows)} window(s) available -- need at least 2 to bootstrap")
@@ -197,7 +197,7 @@ def run_experiment(req) -> list:
 
 
 def compare_calibration(req) -> dict:
-    book_history = BookHistoryReader(req.book_history_path)
+    book_history = open_book_history(req.book_history_path)
     lit_params = literature_coefficients(
         volatility=req.ac_volatility, risk_aversion=req.ac_risk_aversion,
         sqrt_law_coefficient=req.ac_sqrt_law_coefficient,
@@ -236,7 +236,7 @@ def cross_venue_validate(req) -> dict:
 
     per_venue_results = {}
     for venue, path in paths.items():
-        book_history = BookHistoryReader(path)
+        book_history = open_book_history(path)
         windows = enumerate_episode_windows(book_history, req.episode_duration_seconds, req.stride_seconds)
         if len(windows) < 2:
             continue
@@ -300,9 +300,9 @@ def run_venue_routing_comparison(req) -> dict:
     the CLI's own behavior exactly, see venues/README.md.
     """
     book_histories = {
-        "binance": BookHistoryReader(req.binance_book_history_path),
-        "coinbase": BookHistoryReader(req.coinbase_book_history_path),
-        "kraken": BookHistoryReader(req.kraken_book_history_path),
+        "binance": open_book_history(req.binance_book_history_path),
+        "coinbase": open_book_history(req.coinbase_book_history_path),
+        "kraken": open_book_history(req.kraken_book_history_path),
     }
     if req.reference_venue not in book_histories:
         raise ValueError(f"reference_venue must be one of {list(book_histories)}, got {req.reference_venue!r}")

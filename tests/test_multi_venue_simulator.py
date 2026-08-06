@@ -36,9 +36,9 @@ def make_book_histories(tmp_path):
     write_flat_history(tmp_path / "coinbase.jsonl", ask_price=100.00, bid_price=99.90)
     write_flat_history(tmp_path / "kraken.jsonl", ask_price=100.02, bid_price=99.92)
     return {
-        "binance": BookHistoryReader(str(tmp_path / "binance.jsonl")),
-        "coinbase": BookHistoryReader(str(tmp_path / "coinbase.jsonl")),
-        "kraken": BookHistoryReader(str(tmp_path / "kraken.jsonl")),
+        "binance": BookHistoryReader.from_file(str(tmp_path / "binance.jsonl")),
+        "coinbase": BookHistoryReader.from_file(str(tmp_path / "coinbase.jsonl")),
+        "kraken": BookHistoryReader.from_file(str(tmp_path / "kraken.jsonl")),
     }
 
 

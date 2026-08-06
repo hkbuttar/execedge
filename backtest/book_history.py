@@ -1,6 +1,12 @@
-"""Replay real, previously-recorded order book snapshots (lob/run_reconstruction.py
---record-depth-levels output) as a lookup by timestamp, for the order-slicing
-simulator to "submit" hypothetical child orders against.
+"""Replay real, previously-recorded order book snapshots as a lookup by
+timestamp, for the order-slicing simulator to "submit" hypothetical
+child orders against. Two sources, one reader: `lob/run_reconstruction.py
+--record-depth-levels` output, either as JSONL (`from_file`, the
+original/default) or Postgres (`from_db`, added so a deployed instance's
+book history survives an ephemeral filesystem -- see DEPLOYMENT.md and
+db/README.md). Every query method below (`book_at_index`,
+`book_at_or_before`, etc.) is identical either way; only construction
+differs.
 """
 
 import bisect
@@ -11,15 +17,13 @@ from lob.order_book import OrderBook
 
 
 class BookHistoryReader:
-    def __init__(self, path: str):
+    def __init__(self, rows: list[dict]):
         self.venue = None
         self.symbol = None
         self._timestamps: list[datetime] = []
         self._records: list[dict] = []
 
-        with open(path) as f:
-            rows = [json.loads(line) for line in f if line.strip()]
-        rows.sort(key=lambda r: r["timestamp"])
+        rows = sorted(rows, key=lambda r: r["timestamp"])
 
         for row in rows:
             ts = datetime.fromisoformat(row["timestamp"])
@@ -29,7 +33,26 @@ class BookHistoryReader:
             self.symbol = row.get("symbol", self.symbol)
 
         if not self._records:
+            raise ValueError("no snapshot records found")
+
+    @classmethod
+    def from_file(cls, path: str) -> "BookHistoryReader":
+        with open(path) as f:
+            rows = [json.loads(line) for line in f if line.strip()]
+        if not rows:
             raise ValueError(f"no snapshot records found in {path}")
+        return cls(rows)
+
+    @classmethod
+    def from_db(cls, venue: str, symbol: str | None = None, database_url: str | None = None) -> "BookHistoryReader":
+        from db.book_snapshots import fetch_snapshots
+        from db.connection import get_connection
+
+        with get_connection(database_url) as conn:
+            rows = fetch_snapshots(conn, venue, symbol)
+        if not rows:
+            raise ValueError(f"no snapshot records found in DB for venue={venue!r}")
+        return cls(rows)
 
     @property
     def start_time(self) -> datetime:
@@ -64,3 +87,15 @@ class BookHistoryReader:
                 f"(history starts at {self.start_time})"
             )
         return self.book_at_index(idx)
+
+
+def open_book_history(source: str) -> BookHistoryReader:
+    """Every CLI `--book-history`/`--*-book-history` flag and every
+    `*book_history_path` request field in this project accepts a plain
+    filesystem path -- unchanged. Prefix it with `db:` (e.g. `db:binance`)
+    and this reads that venue from Postgres instead, via `DATABASE_URL`.
+    One string, one dispatch point, so every existing call site opts into
+    DB-backed history with no schema/flag changes."""
+    if source.startswith("db:"):
+        return BookHistoryReader.from_db(venue=source[len("db:"):])
+    return BookHistoryReader.from_file(source)

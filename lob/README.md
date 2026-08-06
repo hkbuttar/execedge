@@ -123,6 +123,15 @@ Drop `--minutes` to run until Ctrl-C. Output: `lob/raw/{venue}_features.jsonl`,
 one line per book update, feeding regime identification and later joins
 against real volume data.
 
+Add `--record-depth-levels N` to also persist the top-N real bid/ask
+levels to `lob/raw/{venue}_book_snapshots.jsonl` — what `backtest/`
+replays for hypothetical order fills. Add `--database-url <url>` (or set
+`$DATABASE_URL`) alongside it to *also* write those same depth snapshots
+to Postgres — lets a deployed instance's book history survive a restart
+instead of only living on disk, and lets a local recording run write
+straight into a shared/deployed database. Additive: the JSONL file is
+still written either way. See `db/README.md`.
+
 ## Known limitations / not yet done
 
 - Only top-N *levels* are persisted (`--record-depth-levels`), not the

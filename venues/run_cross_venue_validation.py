@@ -30,7 +30,7 @@ import os
 import pandas as pd
 
 from backtest.experiment import run_bootstrap_experiment, window_regime_labels
-from backtest.book_history import BookHistoryReader
+from backtest.book_history import open_book_history
 from backtest.fill_model import FillModel
 from backtest.scenarios import build_algorithm_scenarios
 from rl.episodes import enumerate_episode_windows
@@ -40,7 +40,7 @@ VENUES = ("binance", "coinbase", "kraken")
 
 
 def run_one_venue(venue, book_history_path, fill_model, args):
-    book_history = BookHistoryReader(book_history_path)
+    book_history = open_book_history(book_history_path)
     windows = enumerate_episode_windows(book_history, args.episode_duration_seconds, args.stride_seconds)
     if len(windows) < 2:
         print(f"[{venue}] only {len(windows)} window(s) available -- skipping this venue")

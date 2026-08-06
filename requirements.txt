@@ -4,6 +4,7 @@ scipy
 fastapi
 uvicorn
 bokeh
+psycopg[binary]
 gymnasium
 stable-baselines3
 torch

@@ -42,7 +42,7 @@ def write_repeated_snapshot(path, n_snapshots, interval_seconds):
 def test_twap_achieves_better_price_than_naive_against_thin_repeated_liquidity(tmp_path):
     path = tmp_path / "history.jsonl"
     write_repeated_snapshot(path, n_snapshots=6, interval_seconds=60)  # covers 5 minutes
-    book_history = BookHistoryReader(str(path))
+    book_history = BookHistoryReader.from_file(str(path))
     fill_model = FillModel(temporary_impact_coef=0.0, permanent_impact_coef=0.0)
     simulator = OrderSlicingSimulator(book_history, fill_model)
 

@@ -37,8 +37,12 @@ execedge/
 ├── backend/    FastAPI: serves backtest/calibration/training results as JSON
 ├── frontend/   Bokeh app: trajectory/comparison/routing/cross-venue tabs,
 │                calls backend.services in-process (no separate HTTP hop)
-└── tests/      217 tests (193 run offline in any environment; 24 need
-                 websocket-client installed to exercise the live reconciliation classes)
+├── db/         Postgres-backed book history (db:<venue>), alongside the
+│                file-based recording/replay -- see db/README.md
+└── tests/      227 tests (195 run offline in any environment; 8 need a
+                 reachable Postgres, self-skip otherwise; 24 need
+                 websocket-client installed to exercise the live
+                 reconciliation classes)
 ```
 
 `Dockerfile`, `docker-compose.yml`, and `render.yaml` at the repo root
@@ -51,7 +55,7 @@ disclosed limitations — start there for depth on any piece:
 [algos/README.md](algos/README.md), [rl/README.md](rl/README.md),
 [backtest/README.md](backtest/README.md), [risk/README.md](risk/README.md),
 [venues/README.md](venues/README.md), [backend/README.md](backend/README.md),
-[frontend/README.md](frontend/README.md).
+[frontend/README.md](frontend/README.md), [db/README.md](db/README.md).
 
 [RESULTS.md](RESULTS.md) pulls all of the above together into the actual
 comparison — algorithm × regime × venue-routing × calibration-source ×
@@ -125,15 +129,25 @@ and the bootstrap-based statistical comparison.
   there — but confirmed running for real via Docker (see Deployment
   below): the server started and served the page. See
   `frontend/README.md` for exactly what was and wasn't verified.
-- **Deployment** — `Dockerfile` + `render.yaml` deploy `backend/` and
-  `frontend/` as two Render web services from one lean image
+- **Deployment** — `Dockerfile` + `render.yaml` deploy `backend/`,
+  `frontend/`, and a managed Postgres (`execedge-db`) from one lean image
   (`requirements-web.txt`, no RL-training dependencies). Built and run
-  locally with real Docker — backend served real data matching
+  locally with real Docker, including the full `docker compose` stack
+  (db + backend + frontend together) — backend served real data matching
   `tests/test_backend.py`, frontend's Bokeh server actually started and
-  served `/app` (`HTTP 200`). Pushing to Render itself needs a GitHub/Render
-  login, which wasn't done here — see `DEPLOYMENT.md` for the exact
-  steps and known data gaps (Coinbase/Kraken book history isn't recorded
-  yet, so those tabs will 404 until it is).
+  served `/app` (`HTTP 200`), and a real `POST /backtest` against a
+  `db:`-backed book history returned a genuine result. Pushing to Render
+  itself needs a GitHub/Render login, which wasn't done here — see
+  `DEPLOYMENT.md` for the exact steps and known data gaps (Coinbase/Kraken
+  book history isn't recorded yet, so those tabs will 404 until it is).
+- **Database (Postgres)** — `db/` persists recorded book history
+  (`book_snapshots` table) as an alternative to `lob/raw/*.jsonl`, so a
+  deployed instance's recordings survive an ephemeral filesystem instead
+  of needing a commit-and-redeploy round trip. Opt-in via a `db:<venue>`
+  prefix on any existing `--book-history` flag/API field — no schema or
+  CLI changes elsewhere. Plain `psycopg`, no ORM; verified against a real
+  local Postgres (Docker) since it's not installed in the environment
+  this was built in — see `db/README.md`.
 
 ## What's not yet implemented
 

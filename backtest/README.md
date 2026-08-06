@@ -81,6 +81,7 @@ backtest/
 ├── order.py          # ParentOrder, ChildOrder, Fill
 ├── algorithm.py       # ExecutionAlgorithm interface + NaiveMarketOrderAlgorithm baseline
 ├── book_history.py    # replays lob/run_reconstruction.py's recorded depth snapshots by timestamp
+│                          (from a file or, via open_book_history("db:<venue>"), Postgres -- see db/README.md)
 ├── fill_model.py       # the book-walk + impact mechanics described above
 ├── metrics.py         # implementation_shortfall
 ├── simulator.py        # OrderSlicingSimulator: ties the above together
@@ -124,6 +125,12 @@ python3 -m backtest.run_backtest \
     --start-offset-seconds 0 --duration-seconds 300 \
     --temporary-impact-coef 0.0 --permanent-impact-coef 0.0
 ```
+
+`--book-history` (every CLI here, and every `*book_history_path` field
+in `backend/`) also accepts `db:<venue>` (e.g. `db:binance`) to read
+from Postgres instead of a file — see `db/README.md` for why this
+exists (a deployed instance's recorded history surviving a restart) and
+exactly how `open_book_history()` dispatches between the two.
 
 ## Statistical rigor
 
@@ -216,4 +223,6 @@ data, rather than diverging — see `venues/README.md`.
   ground truth (`tests/test_fill_model.py`, `tests/test_metrics.py`,
   `tests/test_book_history.py`, `tests/test_simulator.py`) — running it
   against a real recorded book history (the command above) hasn't been
-  done yet, that's on you to try.
+  done yet, that's on you to try. `open_book_history`'s `db:` dispatch
+  path is additionally verified against a real Postgres instance —
+  `tests/test_db_book_snapshots.py`, see `db/README.md`.

@@ -54,7 +54,7 @@ def test_empirical_temporary_impact_recovers_known_linear_law(tmp_path):
     eta_true = 0.10
     path = tmp_path / "history.jsonl"
     write_linear_impact_snapshot(path, n_snapshots=3, eta_true=eta_true)
-    book_history = BookHistoryReader(str(path))
+    book_history = BookHistoryReader.from_file(str(path))
 
     order_sizes = list(range(1, 11))  # exact multiples of level_size=1.0
     estimate = estimate_empirical_temporary_impact(book_history, order_sizes, side="buy")
@@ -97,7 +97,7 @@ def test_per_regime_estimation_separates_calm_and_volatile():
     tmp_dir = tempfile.mkdtemp()
     path = os.path.join(tmp_dir, "history.jsonl")
     write_mixed_history(path)
-    book_history = BookHistoryReader(path)
+    book_history = BookHistoryReader.from_file(path)
 
     regimes_df = pd.DataFrame({
         "open_time": [START, START + timedelta(hours=1), START + timedelta(hours=2), START + timedelta(hours=3)],
@@ -136,7 +136,7 @@ def test_literature_coefficients_rejects_non_positive_reference_rate():
 def test_build_empirical_params_uses_ratio_for_gamma(tmp_path):
     path = tmp_path / "history.jsonl"
     write_linear_impact_snapshot(path, n_snapshots=2, eta_true=0.10)
-    book_history = BookHistoryReader(str(path))
+    book_history = BookHistoryReader.from_file(str(path))
 
     params, estimate = build_empirical_params(
         book_history, order_sizes=list(range(1, 11)), side="buy",

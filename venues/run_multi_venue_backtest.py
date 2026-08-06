@@ -41,7 +41,7 @@ from algos.impact_calibration import build_empirical_params, literature_coeffici
 from algos.twap import TWAPAlgorithm
 from algos.vwap import VWAPAlgorithm
 from backtest.algorithm import NaiveMarketOrderAlgorithm
-from backtest.book_history import BookHistoryReader
+from backtest.book_history import BookHistoryReader, open_book_history
 from backtest.fill_model import FillModel
 from backtest.order import ParentOrder
 from data.volume_profile import build_volume_profile
@@ -138,9 +138,9 @@ def main():
     args = parser.parse_args()
 
     book_histories = {
-        "binance": BookHistoryReader(args.binance_book_history),
-        "coinbase": BookHistoryReader(args.coinbase_book_history),
-        "kraken": BookHistoryReader(args.kraken_book_history),
+        "binance": open_book_history(args.binance_book_history),
+        "coinbase": open_book_history(args.coinbase_book_history),
+        "kraken": open_book_history(args.kraken_book_history),
     }
     reference_history = book_histories[args.reference_venue]
     start_time = reference_history.start_time + timedelta(seconds=args.start_offset_seconds)

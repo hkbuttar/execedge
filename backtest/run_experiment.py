@@ -33,7 +33,7 @@ import os
 import pandas as pd
 
 from algos.twap import TWAPAlgorithm
-from backtest.book_history import BookHistoryReader
+from backtest.book_history import open_book_history
 from backtest.experiment import is_robust, run_bootstrap_experiment, window_regime_labels
 from backtest.fill_model import FillModel
 from backtest.order import ParentOrder
@@ -93,7 +93,7 @@ def main():
 
     args = parser.parse_args()
 
-    book_history = BookHistoryReader(args.book_history)
+    book_history = open_book_history(args.book_history)
     windows = enumerate_episode_windows(book_history, args.episode_duration_seconds, args.stride_seconds)
     if len(windows) < 2:
         raise SystemExit(
@@ -131,9 +131,9 @@ def main():
     # --- 2. venue-routing comparison (optional) ---
     if args.binance_book_history and args.coinbase_book_history and args.kraken_book_history:
         book_histories = {
-            "binance": BookHistoryReader(args.binance_book_history),
-            "coinbase": BookHistoryReader(args.coinbase_book_history),
-            "kraken": BookHistoryReader(args.kraken_book_history),
+            "binance": open_book_history(args.binance_book_history),
+            "coinbase": open_book_history(args.coinbase_book_history),
+            "kraken": open_book_history(args.kraken_book_history),
         }
         reference_venue = args.reference_venue
         reference_symbol = book_histories[reference_venue].symbol

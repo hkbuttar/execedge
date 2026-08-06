@@ -44,7 +44,7 @@ from algos.impact_calibration import build_empirical_params, literature_coeffici
 from algos.twap import TWAPAlgorithm
 from algos.vwap import VWAPAlgorithm
 from backtest.algorithm import NaiveMarketOrderAlgorithm
-from backtest.book_history import BookHistoryReader
+from backtest.book_history import open_book_history
 from backtest.fill_model import FillModel
 from backtest.order import ParentOrder
 from backtest.simulator import OrderSlicingSimulator
@@ -112,7 +112,7 @@ def main():
     )
     args = parser.parse_args()
 
-    book_history = BookHistoryReader(args.book_history)
+    book_history = open_book_history(args.book_history)
     start_time = book_history.start_time + timedelta(seconds=args.start_offset_seconds)
     end_time = start_time + timedelta(seconds=args.duration_seconds)
 

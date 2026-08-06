@@ -48,7 +48,7 @@ def assert_sane_trajectory(children, expected_total_quantity):
 def test_literature_and_empirical_calibrations_both_produce_sane_trajectories(tmp_path):
     path = tmp_path / "history.jsonl"
     write_book_history(path)
-    book_history = BookHistoryReader(str(path))
+    book_history = BookHistoryReader.from_file(str(path))
 
     shared = dict(volatility=0.02, risk_aversion=0.3, permanent_to_temporary_ratio=0.001)
 
@@ -79,7 +79,7 @@ def test_both_calibrations_front_load_within_a_comparable_order_of_magnitude(tmp
     -- a sanity bound, not a claim that they must be close."""
     path = tmp_path / "history.jsonl"
     write_book_history(path)
-    book_history = BookHistoryReader(str(path))
+    book_history = BookHistoryReader.from_file(str(path))
 
     shared = dict(volatility=0.02, risk_aversion=0.3, permanent_to_temporary_ratio=0.001)
     lit_params = literature_coefficients(
@@ -122,7 +122,7 @@ def test_calibrations_reduce_to_twap_identically_when_risk_neutral(tmp_path):
     both to TWAP's exact schedule."""
     path = tmp_path / "history.jsonl"
     write_book_history(path)
-    book_history = BookHistoryReader(str(path))
+    book_history = BookHistoryReader.from_file(str(path))
 
     lit_params = literature_coefficients(
         volatility=0.02, risk_aversion=0.0, sqrt_law_coefficient=1.0,

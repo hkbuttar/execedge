@@ -38,7 +38,7 @@ def make_parent(quantity=10.0, duration_minutes=10):
 def test_no_risk_controls_behaves_as_before(tmp_path):
     path = tmp_path / "history.jsonl"
     write_history(path, n_snapshots=11, interval_seconds=60, ask_price=100.0)
-    book_history = BookHistoryReader(str(path))
+    book_history = BookHistoryReader.from_file(str(path))
     simulator = OrderSlicingSimulator(book_history, FillModel(0.0, 0.0))
 
     result = simulator.run(make_parent(), TWAPAlgorithm(n_slices=5))
@@ -49,7 +49,7 @@ def test_no_risk_controls_behaves_as_before(tmp_path):
 def test_pretripped_kill_switch_halts_before_any_fill(tmp_path):
     path = tmp_path / "history.jsonl"
     write_history(path, n_snapshots=11, interval_seconds=60, ask_price=100.0)
-    book_history = BookHistoryReader(str(path))
+    book_history = BookHistoryReader.from_file(str(path))
     kill_switch = KillSwitch()
     kill_switch.trip("pre-tripped for this test", START)
 
@@ -66,7 +66,7 @@ def test_shortfall_trigger_halts_remaining_children(tmp_path):
     # a real, meaningfully bad ask price so the first fill alone blows
     # past a tiny shortfall threshold
     write_history(path, n_snapshots=11, interval_seconds=60, ask_price=200.0)
-    book_history = BookHistoryReader(str(path))
+    book_history = BookHistoryReader.from_file(str(path))
     kill_switch = KillSwitch()
 
     simulator = OrderSlicingSimulator(
@@ -85,7 +85,7 @@ def test_shortfall_trigger_halts_remaining_children(tmp_path):
 def test_participation_limiter_caps_executed_quantity(tmp_path):
     path = tmp_path / "history.jsonl"
     write_history(path, n_snapshots=11, interval_seconds=60, ask_price=100.0)
-    book_history = BookHistoryReader(str(path))
+    book_history = BookHistoryReader.from_file(str(path))
 
     volume_df = pd.DataFrame({"open_time": [START], "volume": [100.0]})  # thin real volume
     volume_lookup = HistoricalVolumeLookup(volume_df, bar_seconds=3600)
