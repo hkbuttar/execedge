@@ -1,6 +1,6 @@
 """Order-slicing simulator extended across three real venues: an
 algorithm's `.slice()` output (venue-agnostic sizing/timing, unchanged
-from Steps 5-8) gets routed per child order via a `VenueRouter`
+from TWAP/VWAP/AC/RL) gets routed per child order via a `VenueRouter`
 (router.py), executed against *that* venue's own real recorded book, and
 charged that venue's own real taker fee (fees.py) -- every fill in this
 project's fill model crosses the spread, so every fill is a taker fill.

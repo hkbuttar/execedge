@@ -10,8 +10,9 @@ volume in this project's data pipeline to check against directly, so
 fraction of that bar's duration the query window covers, assuming volume
 is spread uniformly within the bar. That's an assumption, not a
 measurement -- real intra-bar volume is very unlikely to be perfectly
-uniform (Step 3's own time-of-day findings are evidence real volume is
-*not* uniform across hours, let alone necessarily uniform within one).
+uniform (the time-of-day findings, `data/time_of_day.py`, are evidence
+real volume is *not* uniform across hours, let alone necessarily uniform
+within one).
 Treat participation estimates from this as directionally right, not
 precise to the second.
 """

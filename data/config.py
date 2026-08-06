@@ -2,8 +2,7 @@
 
 Every venue here exposes public, unauthenticated REST endpoints for order
 book depth and historical klines/candles -- no API keys are required for
-anything in Step 1 (data acquisition) or the depth/volume pipeline that
-depends on it.
+data acquisition or the depth/volume pipeline that depends on it.
 """
 
 from dataclasses import dataclass

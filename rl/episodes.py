@@ -4,9 +4,9 @@ real dates, evaluate on later ones, no lookahead. Same discipline
 referenced from alpha-signal-lab.
 
 Worth stating plainly: this is genuinely limited by how long you've been
-recording a book history. Step 1's volume/kline data is backfillable over
-any historical range via each venue's REST API; Step 2's full order-book
-depth is not -- `lob.run_reconstruction --record-depth-levels` only
+recording a book history. This project's volume/kline data is
+backfillable over any historical range via each venue's REST API; the
+full order-book depth is not -- `lob.run_reconstruction --record-depth-levels` only
 captures data going forward, live, from whenever you start it. So the
 total real history available for RL episodes here is bounded by that
 recording's duration, not by how far back the venues' history goes. Train

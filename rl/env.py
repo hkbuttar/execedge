@@ -1,5 +1,5 @@
 """Gymnasium environment for training the DQN execution policy against
-real historical episodes (Step 8). Not used at evaluation/inference time
+real historical episodes. Not used at evaluation/inference time
 -- rl/policy_algorithm.py wraps a trained model as a
 backtest.algorithm.ExecutionAlgorithm instead, so evaluation runs through
 the exact same simulator/metrics every other algorithm in this project
@@ -7,7 +7,7 @@ does. This class exists purely to drive stable-baselines3's training
 loop.
 
 Requires gymnasium and stable-baselines3 (see requirements.txt) --
-neither is a dependency of anything built in Steps 1-7.
+neither is a dependency of anything else in this project.
 """
 
 from datetime import timedelta

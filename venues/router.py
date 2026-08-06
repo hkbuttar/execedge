@@ -1,9 +1,10 @@
 """Venue-routing decision, layered *alongside* an algorithm's slicing
-decision rather than baked into it -- an algorithm's `.slice()` (Step
-5-8) stays venue-agnostic; `venues/multi_venue_simulator.py` asks a
-router which venue each already-sized, already-timed child order should
-go to. This mirrors how Step 9's risk layer was added as a cross-cutting
-wrapper around the simulator rather than a rewrite of every algorithm.
+decision rather than baked into it -- an algorithm's `.slice()`
+(TWAP/VWAP/AC/RL) stays venue-agnostic; `venues/multi_venue_simulator.py`
+asks a router which venue each already-sized, already-timed child order
+should go to. This mirrors how the risk layer was added as a
+cross-cutting wrapper around the simulator rather than a rewrite of every
+algorithm.
 """
 
 from abc import ABC, abstractmethod

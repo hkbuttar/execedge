@@ -1,7 +1,7 @@
 """Bootstrap confidence intervals for implementation shortfall, computed
 across many real historical windows (different real dates/sessions as
-the source of variation -- Step 11's discipline, not a parametric
-assumption about the shape of shortfall's distribution).
+the source of variation, not a parametric assumption about the shape of
+shortfall's distribution).
 """
 
 from dataclasses import dataclass

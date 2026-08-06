@@ -1,5 +1,5 @@
-"""Step 11: run every algorithm (and, optionally, every venue-routing
-strategy) across many real historical windows, stratified by Step 3's
+"""Run every algorithm (and, optionally, every venue-routing
+strategy) across many real historical windows, stratified by the
 regime labels, reporting implementation shortfall with bootstrap
 confidence intervals.
 

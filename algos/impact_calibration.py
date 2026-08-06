@@ -47,7 +47,7 @@ asset-class-native, no literature dependency.
 It cannot estimate *permanent* impact, and this is a real limitation, not
 an oversight: observing permanent impact requires seeing real subsequent
 price drift attributable to an actual trade of known size, which needs
-real trade prints. This project's data pipeline (Steps 1-2) records order
+real trade prints. This project's data pipeline records order
 book depth, not trade executions -- that data doesn't exist here. So the
 "empirical" calibration set below still falls back to the same
 `permanent_to_temporary_ratio` placeholder used in the literature set for

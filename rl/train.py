@@ -6,8 +6,8 @@ from a recorded book history, with a strict walk-forward train/test split
 Needs gymnasium/stable-baselines3/torch installed (requirements.txt) and
 a recorded book history with --record-depth-levels > 0
 (lob.run_reconstruction). How much real history you need is a genuine,
-disclosed constraint, not a knob to tune away: Step 2's live-forward-only
-recording (unlike Step 1's backfillable volume/kline history) bounds how
+disclosed constraint, not a knob to tune away: the live-forward-only book
+recording (unlike the backfillable volume/kline history) bounds how
 many episode windows exist at all -- enough for a meaningful walk-forward
 split needs a recording that spans several multiples of
 --episode-duration-seconds.
@@ -35,9 +35,9 @@ from rl.episodes import enumerate_episode_windows, train_test_split_windows
 
 
 class EpisodeRewardLogger(BaseCallback):
-    """Logs total reward per completed training episode to CSV -- Step 8's
-    "log training curves" requirement, without pulling in a tensorboard
-    dependency this project doesn't otherwise need."""
+    """Logs total reward per completed training episode to CSV, without
+    pulling in a tensorboard dependency this project doesn't otherwise
+    need."""
 
     def __init__(self, csv_path: str):
         super().__init__()

@@ -12,20 +12,20 @@ Needs a book-snapshot file first (from lob/run_reconstruction.py run with
 
 `--temporary-impact-coef`/`--permanent-impact-coef` have no default on
 purpose (see backtest/fill_model.py) -- pass 0.0 to see pure book-walk
-behavior with no assumed impact; Step 7 is where literature/empirical
-values for these get produced.
+behavior with no assumed impact; the Almgren-Chriss module is where
+literature/empirical values for these get produced.
 
 Algorithms available: `naive` (single-shot baseline, exercises the
-harness only), `twap` (Step 5's control -- equal slices at regular
-intervals, pass --n-slices), `vwap` (Step 6 -- slices proportional to a
+harness only), `twap` (the control -- equal slices at regular
+intervals, pass --n-slices), `vwap` (slices proportional to a
 real historical volume curve, needs --volume-csv from
 `data.fetch_volume`'s output; falls back to a flat/TWAP-equivalent
-profile if Step 3's time-of-day test found no real pattern for this
-venue), and `ac` (Step 7 -- Almgren-Chriss closed-form trajectory, pass
+profile if the time-of-day test found no real pattern for this
+venue), and `ac` (Almgren-Chriss closed-form trajectory, pass
 --ac-calibration literature|empirical; see algos/README.md for what each
 means and the disclosed gap in the literature source).
 
-Step 9's risk layer (risk/) is optional and off by default:
+The risk layer (risk/) is optional and off by default:
 --participation-limit caps each child order against real volume
 (risk/README.md on the proration caveat), and --kill-switch-max-vol /
 --kill-switch-max-shortfall-bps halt all remaining child orders for the

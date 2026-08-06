@@ -5,7 +5,7 @@ Usage:
 
 A snapshot is a point-in-time read of resting liquidity; running this
 repeatedly (e.g. on a cron/loop) is how you'd accumulate a real depth
-history for later book reconstruction (Step 2).
+history for later book reconstruction (see lob/).
 """
 
 import argparse

@@ -5,9 +5,8 @@ every other algorithm in this project is scored with -- an apples-to-
 apples comparison, not a separate RL-only evaluation loop.
 
 Reports honestly: if the RL policy underperforms Almgren-Chriss, that's
-exactly what gets printed. Step 8 explicitly calls for this, and it's
-consistent with how this project has handled every other disclosed
-limitation so far (see data/README.md, algos/README.md).
+exactly what gets printed, consistent with how this project has handled
+every other disclosed limitation so far (see data/README.md, algos/README.md).
 
     python3 -m rl.evaluate \\
         --book-history lob/raw/binance_book_snapshots.jsonl \\

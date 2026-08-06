@@ -28,10 +28,11 @@ Mechanics, stated plainly:
    other backtests, and for other child orders at the same historical
    timestamp from a different simulated run, stays untouched.
 
-`temporary_impact_coef` / `permanent_impact_coef` have no default: Step 1
-deliberately didn't hardcode literature impact numbers without a proper
-citation, and Step 7 is where literature-derived and empirically-estimated
-coefficients get produced and compared. Pass `0.0` for both to isolate
+`temporary_impact_coef` / `permanent_impact_coef` have no default:
+real-data acquisition deliberately didn't hardcode literature impact
+numbers without a proper citation, and the Almgren-Chriss module is
+where literature-derived and empirically-estimated coefficients get
+produced and compared. Pass `0.0` for both to isolate
 pure book-walk behavior (e.g. for testing) -- that's an explicit choice,
 not a silent one.
 """

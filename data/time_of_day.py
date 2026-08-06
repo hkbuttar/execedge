@@ -3,8 +3,8 @@ checked directly against real fetched volume bars rather than assumed one
 way or the other. Crypto venues never close, so there's no equities-style
 open/close volume spike a priori -- but regional session overlap
 (Asia/Europe/US) could still produce a real, milder hour-of-day effect.
-This module answers that empirically per venue; Step 6's VWAP profile
-shape (flat vs. hourly-curved) should follow whatever this finds, not an
+This module answers that empirically per venue; VWAP's profile shape
+(flat vs. hourly-curved) should follow whatever this finds, not an
 assumption imported from equities.
 """
 

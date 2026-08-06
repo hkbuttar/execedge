@@ -1,6 +1,6 @@
 """Connect to real venue feeds, reconstruct each order book live, and
 append computed microstructure features to JSONL for later analysis
-(Step 3 regime identification, Step 6 volume/feature joins).
+(regime identification, volume/feature joins).
 
 This is a long-running process (holds open websocket connections) -- run
 it yourself for however long you want a feature history for:

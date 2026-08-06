@@ -3,8 +3,8 @@ Kraken's real recorded books, comparing four routing strategies in one
 shot: always-Binance, always-Coinbase, always-Kraken (the three "naive,
 no real routing decision" baselines), and best-effective-price (real
 quote + real taker fee, decided per child order at its own real
-timestamp) -- Step 10's "does smarter routing meaningfully reduce cost"
-question, answered directly, honestly, either way.
+timestamp) -- "does smarter routing meaningfully reduce cost," answered
+directly, honestly, either way.
 
 Needs a recorded book history for all three venues:
 
@@ -18,13 +18,13 @@ Needs a recorded book history for all three venues:
         --temporary-impact-coef 0.0 --permanent-impact-coef 0.0
 
 Any `backtest.algorithm.ExecutionAlgorithm` works here unmodified,
-including the RL policy from Step 8 (`rl.policy_algorithm.TrainedPolicyAlgorithm`)
+including the RL policy (`rl.policy_algorithm.TrainedPolicyAlgorithm`)
 -- this CLI only wires up naive/twap/vwap/ac directly, but
 `MultiVenueSimulator` itself doesn't know or care what kind of algorithm
 object it's calling `.slice()` on. That's the point of routing being a
 cross-cutting layer (see venues/README.md) rather than something baked
 into each algorithm: RL decides *how much to trade when* using its own
-venue's real signals, unmodified from Step 8; this layer decides *where*
+venue's real signals, unmodified; this layer decides *where*
 to actually execute using all three venues' real quotes and fees,
 without RL needing to know routing exists.
 """

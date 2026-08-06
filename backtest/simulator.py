@@ -3,7 +3,7 @@ slice into child orders, submit each against the real reconstructed book
 at its real timestamp via the fill model, and score the result against
 implementation shortfall.
 
-Optionally applies Step 9's risk layer (risk/) as each child order is
+Optionally applies the risk layer (risk/) as each child order is
 about to be submitted -- a participation-rate cap and/or a kill switch
 that halts all remaining child orders for the rest of this run. Both are
 cross-cutting: they wrap *any* algorithm's output here, in the one place

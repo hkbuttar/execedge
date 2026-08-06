@@ -1,6 +1,6 @@
 """Pull real historical intraday volume bars (klines/candles) from each venue
-and save to data/raw/volume/ as CSV, for VWAP profile construction (Step 6)
-and regime identification (Step 3).
+and save to data/raw/volume/ as CSV, for VWAP profile construction and
+regime identification.
 
 Usage:
     python -m data.fetch_volume --days 7 --interval 60

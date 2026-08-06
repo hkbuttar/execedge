@@ -1,5 +1,5 @@
-"""Turns Step 3's time-of-day finding into per-hour weights for VWAP
-(Step 6): flat if the ANOVA in `data/time_of_day.py` found no significant
+"""Turns the time-of-day finding into per-hour weights for VWAP:
+flat if the ANOVA in `data/time_of_day.py` found no significant
 hour-of-day effect, the real empirical hourly shape if it did. This is
 where "let the data decide" actually gets enforced in code, rather than
 importing equities' U-shaped volume curve as an assumption.

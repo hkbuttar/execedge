@@ -1,5 +1,5 @@
-"""Per-step reward: negative implementation shortfall (Step 4's fill
-model, same cost convention as backtest.metrics.implementation_shortfall)
+"""Per-step reward: negative implementation shortfall (the fill
+model's cost convention, same as backtest.metrics.implementation_shortfall)
 plus an Almgren-Chriss-consistent risk-aversion penalty on remaining
 exposure.
 
@@ -9,7 +9,7 @@ equals exactly `-implementation_shortfall(...).total_cost` computed by
 `backtest.metrics` on the same fills -- the RL reward signal is the same
 objective every other algorithm in this project is scored on, not a
 separate proxy for it. `risk_aversion > 0` adds a variance-penalty term on
-top, mirroring how Almgren-Chriss's own objective (Step 7) adds
+top, mirroring how Almgren-Chriss's own objective adds
 `risk_aversion * variance` beyond expected cost -- not something
 `implementation_shortfall` itself accounts for.
 """

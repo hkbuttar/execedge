@@ -10,8 +10,8 @@ fixed volatility level -- refetching more/less history, or a different
 date range, shifts the thresholds. That's a deliberate tradeoff: an
 absolute threshold would need an external reference vol level this
 project has no principled way to pick for crypto, whereas terciles always
-partition the sample into three comparably-sized regimes for Step 11's
-per-regime statistics to run on.
+partition the sample into three comparably-sized regimes for the
+statistical-rigor layer's per-regime statistics to run on.
 """
 
 import numpy as np

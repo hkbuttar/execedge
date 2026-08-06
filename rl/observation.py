@@ -1,5 +1,5 @@
 """State vector for the RL execution policy, built entirely from the real
-reconstructed book (Step 2) plus the agent's own progress through the
+reconstructed book (`lob/`) plus the agent's own progress through the
 current parent order: remaining inventory, time remaining, spread,
 order book imbalance, recent realized volatility.
 """

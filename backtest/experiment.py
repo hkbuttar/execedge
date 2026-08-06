@@ -6,7 +6,7 @@ a bootstrap CI per scenario, per regime.
 Deliberately agnostic to what a "scenario" represents -- the caller
 decides whether "scenario" means an algorithm, a venue-routing strategy,
 a calibration source, or any combination, by writing the callable. This
-is what lets one runner cover Step 11's whole "algorithm x regime x
+is what lets one runner cover the whole "algorithm x regime x
 venue-routing x calibration-source" cross-product without hardcoding any
 particular axis: backtest/run_experiment.py wires up two concrete uses of
 it (algorithm comparison, and venue-routing comparison) rather than a
@@ -34,7 +34,7 @@ class ScenarioResult:
 
 def window_regime_labels(windows: list, regimes_df: pd.DataFrame) -> dict:
     """Maps each window's start_time to a regime label (calm/normal/
-    volatile), via merge_asof against Step 3's regime CSV
+    volatile), via merge_asof against the regime CSV
     (data/analyze_regimes.py output, columns open_time, regime) -- the
     same join pattern as
     algos.impact_calibration.estimate_empirical_temporary_impact_per_regime.

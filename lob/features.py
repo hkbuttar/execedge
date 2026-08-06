@@ -25,8 +25,8 @@ class FeatureSnapshot:
 class RealizedVolTracker:
     """Rolling realized volatility of log returns over the last `window`
     mid-price observations. Not annualized -- this is a per-observation
-    volatility meant for regime comparison (Step 3), not a risk metric
-    calibrated to a fixed time unit, since update arrival isn't evenly
+    volatility meant for regime comparison (`data/regimes.py`), not a
+    risk metric calibrated to a fixed time unit, since update arrival isn't evenly
     spaced across venues.
     """
 
