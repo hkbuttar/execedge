@@ -1,0 +1,17 @@
+# Dependencies for backend/ + frontend/ only -- everything the deployed
+# web services (FastAPI JSON API, Bokeh UI) actually import.
+#
+# Deliberately excludes gymnasium/stable-baselines3/torch/websocket-client
+# from requirements.txt: backend/services.py only imports rl.diagnostics
+# and rl.episodes (pure pandas/stdlib, no RL-framework dependency -- see
+# rl/README.md), never rl.env/rl.policy_algorithm/rl.train, and neither
+# service opens a live exchange websocket. Skipping ~2GB of torch in the
+# deploy image keeps builds fast and within free-tier build/image limits.
+# Use requirements.txt (not this file) for local development, training,
+# or live book recording.
+numpy
+pandas
+scipy
+fastapi
+uvicorn
+bokeh

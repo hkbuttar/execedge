@@ -41,6 +41,10 @@ execedge/
                  websocket-client installed to exercise the live reconciliation classes)
 ```
 
+`Dockerfile`, `docker-compose.yml`, and `render.yaml` at the repo root
+deploy `backend/` and `frontend/` as two Render web services — see
+[DEPLOYMENT.md](DEPLOYMENT.md).
+
 Each module has its own README with full methodology, citations, and
 disclosed limitations — start there for depth on any piece:
 [data/README.md](data/README.md), [lob/README.md](lob/README.md),
@@ -116,16 +120,23 @@ and the bootstrap-based statistical comparison.
   RL) over HTTP — those stay CLI-only.
 - **Frontend (Bokeh)** — trajectory, algorithm comparison (with bootstrap
   CIs), venue routing, and cross-venue tabs, calling `backend.services`
-  in-process rather than over HTTP. Caveat: `bokeh` isn't installed in
-  the environment this was built in, so the app has been checked for
-  correctness (data layer fully tested, `py_compile`-clean, plotting
-  logic independently verified by hand) but never actually run or
-  visually inspected — see `frontend/README.md` for exactly what was and
-  wasn't verified.
+  in-process rather than over HTTP. `bokeh` isn't installed in the
+  environment this was built in, so it was never reachable directly
+  there — but confirmed running for real via Docker (see Deployment
+  below): the server started and served the page. See
+  `frontend/README.md` for exactly what was and wasn't verified.
+- **Deployment** — `Dockerfile` + `render.yaml` deploy `backend/` and
+  `frontend/` as two Render web services from one lean image
+  (`requirements-web.txt`, no RL-training dependencies). Built and run
+  locally with real Docker — backend served real data matching
+  `tests/test_backend.py`, frontend's Bokeh server actually started and
+  served `/app` (`HTTP 200`). Pushing to Render itself needs a GitHub/Render
+  login, which wasn't done here — see `DEPLOYMENT.md` for the exact
+  steps and known data gaps (Coinbase/Kraken book history isn't recorded
+  yet, so those tabs will 404 until it is).
 
 ## What's not yet implemented
 
-- Deployment.
 - Tick/lot-size rounding on child order prices/sizes.
 - Continuous-action RL (only size is discretized here).
 - Venue-level risk limits for multi-venue routing (today's risk layer is

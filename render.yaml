@@ -1,0 +1,44 @@
+# Render Blueprint: https://render.com/docs/blueprint-spec
+#
+# Deploys backend/ and frontend/ as two independent services from the
+# same image (see Dockerfile) -- deliberately not one process, even
+# though the frontend can run standalone without the backend service
+# (frontend/data_access.py calls backend.services in-process, not over
+# HTTP). Splitting them means the JSON API + /docs are reachable on
+# their own, and either service can be scaled/restarted independently.
+#
+# To deploy: push this repo to GitHub, then in the Render dashboard use
+# "New +" -> "Blueprint" and point it at the repo. Render reads this
+# file and creates both services. Free plan: both spin down after 15
+# minutes idle and take ~30-60s to wake on the next request.
+services:
+  - type: web
+    name: execedge-backend
+    env: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    dockerCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
+    healthCheckPath: /health
+
+  - type: web
+    name: execedge-frontend
+    env: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    # --allow-websocket-origin must match the public hostname or Bokeh
+    # refuses the UI's websocket connection; RENDER_EXTERNAL_HOSTNAME is
+    # set automatically by Render on every web service. --use-xheaders
+    # is needed because Render terminates TLS at its proxy and forwards
+    # via X-Forwarded-* headers, which Bokeh must trust to get the
+    # origin check right.
+    dockerCommand: >-
+      bash -c "bokeh serve frontend/app.py --port $PORT --address 0.0.0.0
+      --allow-websocket-origin=$RENDER_EXTERNAL_HOSTNAME --use-xheaders"
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"

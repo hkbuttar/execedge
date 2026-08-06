@@ -18,6 +18,16 @@ unverified is Bokeh's own rendering of the resulting figures. Run it
 yourself and see.
 """
 
+import sys
+from pathlib import Path
+
+# `bokeh serve` puts only this file's own directory on sys.path, not the
+# repo root -- add it so the sibling `frontend`/`backend` packages resolve
+# regardless of the caller's cwd or PYTHONPATH.
+_PROJECT_ROOT = str(Path(__file__).resolve().parent.parent)
+if _PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, _PROJECT_ROOT)
+
 from bokeh.io import curdoc
 from bokeh.layouts import column, row
 from bokeh.models import Button, Div, NumericInput, Select, TabPanel, Tabs, TextInput

@@ -44,6 +44,14 @@ bokeh serve frontend/app.py
 ```
 
 then open the URL Bokeh prints (default `http://localhost:5006/app`).
+
+`bokeh serve` only puts `frontend/`'s own directory on `sys.path`, not the
+repo root, which would otherwise break `app.py`'s `from frontend import
+data_access, plots` (and, one level deeper, `data_access.py`'s `from
+backend import services`) with `ModuleNotFoundError: No module named
+'frontend'`. `app.py` works around this itself, inserting the repo root
+(`Path(__file__).resolve().parent.parent`) onto `sys.path` before those
+imports run, so it works regardless of the caller's cwd or `PYTHONPATH`.
 Each tab defaults its book-history/regimes-CSV inputs to this project's
 own real recorded data (`lob/raw/binance_book_snapshots.jsonl`,
 `data/raw/regimes/binance_regimes.csv`) so the first click on each tab
