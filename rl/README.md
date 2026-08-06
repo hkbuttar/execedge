@@ -68,6 +68,28 @@ writes one row per completed training episode (`episode, total_reward`)
 to a plain CSV — logging training curves without adding tensorboard as a
 dependency this project doesn't otherwise need.
 
+## Training diagnostics (`diagnostics.py`, `diagnose.py`)
+
+`diagnose_training_run` analyzes that CSV after a run completes: mean/
+std/min/max reward, whether the mean reward in the last window of
+episodes actually beat the first window (`improved`), and whether any
+episode's reward came back NaN or inf (a real training-divergence
+failure mode worth catching rather than silently plotting over). This is
+pure `pandas` analysis with no `gymnasium`/`stable-baselines3` dependency,
+so it runs — and is tested (`tests/test_rl_diagnostics.py`) — in any
+environment, including ones where the RL frameworks themselves aren't
+installed.
+
+```
+python3 -m rl.diagnose --rewards-csv rl/raw/training_rewards.csv
+```
+
+Reported honestly: if a run's reward didn't improve from early to late
+training, that's exactly what gets printed, not smoothed over — this
+tool flags whether a run is worth evaluating further, it doesn't
+diagnose *why* (hyperparameters, episode count, and reward shaping all
+need domain judgment this tool doesn't attempt).
+
 ## Usage
 
 Needs `gymnasium`, `stable-baselines3`, `torch` (already in
@@ -103,13 +125,14 @@ with how this project has handled every other disclosed limitation
 
 ## What's tested here without gymnasium/stable-baselines3 installed
 
-`episodes.py`, `observation.py`, `reward.py`, and `action_space.py` have
-no RL-framework dependency and are fully covered by offline tests
-(`tests/test_rl_*.py`, 17 tests) that ran and passed in this environment.
-`env.py`, `policy_algorithm.py`, `train.py`, and `evaluate.py` all
-compile cleanly (no syntax/import-order issues) but do need
-`gymnasium`/`stable-baselines3` actually installed to run — that's on
-you to verify once you `pip install -r requirements.txt`.
+`episodes.py`, `observation.py`, `reward.py`, `action_space.py`, and
+`diagnostics.py` (and its `diagnose.py` CLI) have no RL-framework
+dependency and are fully covered by offline tests (`tests/test_rl_*.py`,
+26 tests) that ran and passed in this environment. `env.py`,
+`policy_algorithm.py`, `train.py`, and `evaluate.py` all compile cleanly
+(no syntax/import-order issues) but do need `gymnasium`/`stable-baselines3`
+actually installed to run — that's on you to verify once you
+`pip install -r requirements.txt`.
 
 ## Not yet implemented
 

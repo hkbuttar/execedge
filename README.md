@@ -34,7 +34,7 @@ execedge/
 │                bootstrap confidence intervals, regime-stratified experiments
 ├── risk/       participation-rate limits, manual-reset-only kill switch
 ├── venues/     multi-venue routing, real fee schedules, cross-venue comparison
-└── tests/      154 tests (138 run offline in any environment; 16 need
+└── tests/      174 tests (150 run offline in any environment; 24 need
                  websocket-client installed to exercise the live reconciliation classes)
 ```
 

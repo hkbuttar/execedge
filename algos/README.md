@@ -169,6 +169,17 @@ report rather than paper over.
 which of the two calibrated coefficients the resulting trajectory is more
 sensitive to.
 
+**Cross-calibration sanity check** (`tests/test_ac_calibration_sanity.py`):
+literature and empirical calibration can genuinely diverge in their raw
+eta/gamma values (that's a disclosed finding above, not a bug) — but
+regardless of how much they diverge, neither should ever produce an
+insane trajectory. This test verifies both calibrations, run against the
+same real synthetic order book, produce non-negative quantities summing
+to the parent order's quantity, front-load execution by a comparable
+order of magnitude (within 100x of each other, a sanity bound not a
+precision claim), and both still hit the exact risk-neutral-reduces-to-
+TWAP special case regardless of how different their coefficients are.
+
 ```
 # literature calibration
 python3 -m backtest.run_backtest \

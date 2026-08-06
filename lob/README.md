@@ -77,9 +77,17 @@ called exactly once across multiple retries). What's still genuinely
 untested without a live connection is the websocket threading/timing
 itself -- that's on you to run and confirm, again.
 
-Coinbase's reconciliation *logic* has similarly not been exercised
-against a live feed yet — same caveat, run it yourself to find out
-(see below).
+Coinbase's reconciliation *logic* is covered by
+`tests/test_coinbase_reconcile.py`: a scripted, real-shaped sequence of
+`snapshot`/`l2update` messages (Coinbase's own published `level2` channel
+schema) replayed through `_on_message`, checking book state at
+checkpoints — level additions, updates, zero-size removals, mixed-side
+updates in one message, non-book message types being ignored, and a
+fresh `snapshot` after a simulated reconnect fully replacing rather than
+merging with prior state. What's still genuinely untested without a live
+connection is the actual websocket behavior itself (subscribe timing,
+real reconnect behavior) — same caveat as Binance, run it yourself to
+find out (see below).
 
 **All three clients also had a second, related gap**: none of them
 reconnected on a dropped websocket connection, `run_forever()` just
