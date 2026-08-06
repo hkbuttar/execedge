@@ -1,0 +1,12 @@
+numpy
+pandas
+scipy
+fastapi
+uvicorn
+bokeh
+gymnasium
+stable-baselines3
+torch
+requests
+websocket-client
+pytest
