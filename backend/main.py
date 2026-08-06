@@ -36,6 +36,9 @@ from backend.schemas import (
     RLDiagnosticsRequest,
     RLDiagnosticsResponse,
     ScenarioResultOut,
+    TrajectoryResponse,
+    VenueRoutingRequest,
+    VenueRoutingResponse,
 )
 
 app = FastAPI(
@@ -61,6 +64,11 @@ def backtest(req: BacktestRequest):
     return _run_or_400(services.run_backtest, req)
 
 
+@app.post("/backtest/trajectory", response_model=TrajectoryResponse)
+def backtest_trajectory(req: BacktestRequest):
+    return _run_or_400(services.run_backtest_trajectory, req)
+
+
 @app.post("/experiment", response_model=list[ScenarioResultOut])
 def experiment(req: ExperimentRequest):
     return _run_or_400(services.run_experiment, req)
@@ -74,6 +82,11 @@ def calibration_compare(req: CalibrationCompareRequest):
 @app.get("/venues/fees", response_model=list[FeeScheduleOut])
 def venues_fees():
     return services.get_fee_schedules()
+
+
+@app.post("/venues/routing", response_model=VenueRoutingResponse)
+def venues_routing(req: VenueRoutingRequest):
+    return _run_or_400(services.run_venue_routing_comparison, req)
 
 
 @app.post("/venues/cross-validate", response_model=CrossVenueResponse)

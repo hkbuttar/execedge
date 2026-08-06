@@ -30,6 +30,18 @@ class BacktestRequest(BaseModel):
     ac_empirical_order_sizes: Optional[str] = None
 
 
+class TrajectoryPoint(BaseModel):
+    timestamp: str
+    remaining_quantity: float
+
+
+class TrajectoryResponse(BaseModel):
+    venue: str
+    algorithm: str
+    quantity: float
+    points: list[TrajectoryPoint]
+
+
 class BacktestResponse(BaseModel):
     venue: str
     symbol: str
@@ -110,6 +122,45 @@ class FeeScheduleOut(BaseModel):
     maker_fee_bps: float
     taker_fee_bps: float
     source: str
+
+
+class VenueRoutingRequest(BaseModel):
+    binance_book_history_path: str
+    coinbase_book_history_path: str
+    kraken_book_history_path: str
+    reference_venue: str = "binance"
+    side: str
+    quantity: float
+    algorithm: str = "twap"
+    n_slices: int = 10
+    start_offset_seconds: float = 0.0
+    duration_seconds: float
+    temporary_impact_coef: float
+    permanent_impact_coef: float
+    volume_csv: Optional[str] = None
+    time_of_day_alpha: float = 0.05
+    ac_calibration: Optional[str] = None
+    ac_volatility: Optional[float] = None
+    ac_risk_aversion: Optional[float] = None
+    ac_permanent_to_temporary_ratio: Optional[float] = None
+    ac_sqrt_law_coefficient: Optional[float] = None
+    ac_reference_participation_rate: Optional[float] = None
+    ac_empirical_order_sizes: Optional[str] = None
+
+
+class VenueRoutingStrategyOut(BaseModel):
+    strategy: str
+    total_cost_bps: float
+    executed_quantity: float
+    routing_counts: dict[str, int]
+
+
+class VenueRoutingResponse(BaseModel):
+    reference_venue: str
+    algorithm: str
+    strategies: list[VenueRoutingStrategyOut]
+    best_single_venue: str
+    smart_routing_improves: bool
 
 
 class CrossVenueRequest(BaseModel):

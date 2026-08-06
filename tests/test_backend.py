@@ -176,6 +176,63 @@ def test_calibration_compare(client, tmp_path):
     assert "temporary_impact_ratio" in body
 
 
+def test_backtest_trajectory(client, tmp_path):
+    path = tmp_path / "history.jsonl"
+    write_history(path)
+    r = client.post("/backtest/trajectory", json={
+        "book_history_path": str(path),
+        "side": "buy", "quantity": 1.0, "algorithm": "twap", "n_slices": 5,
+        "start_offset_seconds": 0, "duration_seconds": 300,
+        "temporary_impact_coef": 0.0, "permanent_impact_coef": 0.0,
+    })
+    assert r.status_code == 200
+    body = r.json()
+    points = body["points"]
+    assert len(points) == 6  # start point + 5 child orders
+    assert points[0]["remaining_quantity"] == pytest.approx(1.0)
+    assert points[-1]["remaining_quantity"] == pytest.approx(0.0, abs=1e-6)
+    # remaining quantity should be non-increasing across the trajectory
+    remaining = [p["remaining_quantity"] for p in points]
+    assert all(a >= b - 1e-9 for a, b in zip(remaining, remaining[1:]))
+
+
+def test_venue_routing_comparison(client, tmp_path):
+    binance_path = tmp_path / "binance.jsonl"
+    coinbase_path = tmp_path / "coinbase.jsonl"
+    kraken_path = tmp_path / "kraken.jsonl"
+    write_history(binance_path, venue="binance", n=30, ask_base=100.05, bid_base=99.95)
+    write_history(coinbase_path, venue="coinbase", n=30, ask_base=100.00, bid_base=99.90)
+    write_history(kraken_path, venue="kraken", n=30, ask_base=100.02, bid_base=99.92)
+
+    r = client.post("/venues/routing", json={
+        "binance_book_history_path": str(binance_path),
+        "coinbase_book_history_path": str(coinbase_path),
+        "kraken_book_history_path": str(kraken_path),
+        "side": "buy", "quantity": 2.0, "algorithm": "twap", "n_slices": 4,
+        "duration_seconds": 80,
+        "temporary_impact_coef": 0.0, "permanent_impact_coef": 0.0,
+    })
+    assert r.status_code == 200
+    body = r.json()
+    strategies = {s["strategy"] for s in body["strategies"]}
+    assert strategies == {"always_binance", "always_coinbase", "always_kraken", "best_price"}
+    assert body["best_single_venue"] in strategies
+    assert isinstance(body["smart_routing_improves"], bool)
+
+
+def test_venue_routing_missing_file_returns_400(client, tmp_path):
+    binance_path = tmp_path / "binance.jsonl"
+    write_history(binance_path, venue="binance")
+    r = client.post("/venues/routing", json={
+        "binance_book_history_path": str(binance_path),
+        "coinbase_book_history_path": "does/not/exist.jsonl",
+        "kraken_book_history_path": "does/not/exist.jsonl",
+        "side": "buy", "quantity": 2.0, "duration_seconds": 80,
+        "temporary_impact_coef": 0.0, "permanent_impact_coef": 0.0,
+    })
+    assert r.status_code == 400
+
+
 def test_cross_venue_validate_consistent(client, tmp_path):
     binance_path = tmp_path / "binance.jsonl"
     coinbase_path = tmp_path / "coinbase.jsonl"

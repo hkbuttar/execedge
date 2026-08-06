@@ -35,7 +35,9 @@ execedge/
 ├── risk/       participation-rate limits, manual-reset-only kill switch
 ├── venues/     multi-venue routing, real fee schedules, cross-venue comparison
 ├── backend/    FastAPI: serves backtest/calibration/training results as JSON
-└── tests/      205 tests (181 run offline in any environment; 24 need
+├── frontend/   Bokeh app: trajectory/comparison/routing/cross-venue tabs,
+│                calls backend.services in-process (no separate HTTP hop)
+└── tests/      217 tests (193 run offline in any environment; 24 need
                  websocket-client installed to exercise the live reconciliation classes)
 ```
 
@@ -44,7 +46,8 @@ disclosed limitations — start there for depth on any piece:
 [data/README.md](data/README.md), [lob/README.md](lob/README.md),
 [algos/README.md](algos/README.md), [rl/README.md](rl/README.md),
 [backtest/README.md](backtest/README.md), [risk/README.md](risk/README.md),
-[venues/README.md](venues/README.md), [backend/README.md](backend/README.md).
+[venues/README.md](venues/README.md), [backend/README.md](backend/README.md),
+[frontend/README.md](frontend/README.md).
 
 [RESULTS.md](RESULTS.md) pulls all of the above together into the actual
 comparison — algorithm × regime × venue-routing × calibration-source ×
@@ -111,10 +114,18 @@ and the bootstrap-based statistical comparison.
   exact same functions the CLIs do, nothing reimplemented. Deliberately
   doesn't expose long-running operations (recording a live book, training
   RL) over HTTP — those stay CLI-only.
+- **Frontend (Bokeh)** — trajectory, algorithm comparison (with bootstrap
+  CIs), venue routing, and cross-venue tabs, calling `backend.services`
+  in-process rather than over HTTP. Caveat: `bokeh` isn't installed in
+  the environment this was built in, so the app has been checked for
+  correctness (data layer fully tested, `py_compile`-clean, plotting
+  logic independently verified by hand) but never actually run or
+  visually inspected — see `frontend/README.md` for exactly what was and
+  wasn't verified.
 
 ## What's not yet implemented
 
-- Frontend (Bokeh) serving layer, and deployment.
+- Deployment.
 - Tick/lot-size rounding on child order prices/sizes.
 - Continuous-action RL (only size is discretized here).
 - Venue-level risk limits for multi-venue routing (today's risk layer is

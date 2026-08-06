@@ -8,6 +8,7 @@ data) -- `backend/main.py` turns those into HTTP 400s.
 """
 
 import os
+from collections import Counter
 from dataclasses import asdict
 from datetime import timedelta
 
@@ -29,6 +30,8 @@ from rl.diagnostics import diagnose_training_run
 from rl.episodes import enumerate_episode_windows
 from venues.cross_venue_validation import compare_rankings_across_venues, rank_scenarios
 from venues.fees import VENUE_FEE_SCHEDULES
+from venues.multi_venue_simulator import MultiVenueSimulator
+from venues.router import BestEffectivePriceRouter, SingleVenueRouter
 
 
 def _build_single_algorithm(book_history: BookHistoryReader, req):
@@ -93,7 +96,10 @@ def _build_single_algorithm(book_history: BookHistoryReader, req):
     return NaiveMarketOrderAlgorithm()
 
 
-def run_backtest(req) -> dict:
+def _run_single_backtest(req):
+    """Shared setup for run_backtest and run_backtest_trajectory -- both
+    need the same parent order + algorithm + simulator run, just expose
+    different levels of detail from the same BacktestResult."""
     book_history = BookHistoryReader(req.book_history_path)
     start_time = book_history.start_time + timedelta(seconds=req.start_offset_seconds)
     end_time = start_time + timedelta(seconds=req.duration_seconds)
@@ -106,6 +112,11 @@ def run_backtest(req) -> dict:
     algorithm = _build_single_algorithm(book_history, req)
     simulator = OrderSlicingSimulator(book_history, fill_model)
     result = simulator.run(parent, algorithm)
+    return parent, result
+
+
+def run_backtest(req) -> dict:
+    parent, result = _run_single_backtest(req)
     s = result.shortfall
 
     return {
@@ -116,6 +127,33 @@ def run_backtest(req) -> dict:
         "executed_quantity": s.executed_quantity, "unfilled_quantity": s.unfilled_quantity,
         "executed_cost": s.executed_cost, "opportunity_cost": s.opportunity_cost,
         "total_cost": s.total_cost, "total_cost_bps": s.total_cost_bps,
+    }
+
+
+def run_backtest_trajectory(req) -> dict:
+    """Remaining-inventory trajectory over time -- what the frontend's
+    execution-trajectory plot needs, which the aggregate `run_backtest`
+    response doesn't expose. Each `Fill.timestamp` equals its child
+    order's own timestamp (`backtest/fill_model.py`), so fills are
+    grouped back to the child order that produced them by matching on
+    that timestamp -- no change needed to BacktestResult itself.
+    """
+    parent, result = _run_single_backtest(req)
+
+    fills_by_timestamp = {}
+    for fill in result.fills:
+        fills_by_timestamp.setdefault(fill.timestamp, []).append(fill)
+
+    remaining = parent.quantity
+    points = [{"timestamp": parent.start_time.isoformat(), "remaining_quantity": remaining}]
+    for child in result.child_orders:
+        executed_here = sum(f.quantity for f in fills_by_timestamp.get(child.timestamp, []))
+        remaining -= executed_here
+        points.append({"timestamp": child.timestamp.isoformat(), "remaining_quantity": remaining})
+
+    return {
+        "venue": parent.venue, "algorithm": req.algorithm, "quantity": parent.quantity,
+        "points": points,
     }
 
 
@@ -251,3 +289,59 @@ def get_rl_diagnostics(req) -> dict:
         raise ValueError(f"no rewards CSV at {req.rewards_csv}")
     result = diagnose_training_run(req.rewards_csv, window_fraction=req.window_fraction)
     return asdict(result)
+
+
+def run_venue_routing_comparison(req) -> dict:
+    """Step 10's routing comparison (venues.run_multi_venue_backtest),
+    exposed as a service: the same parent order and algorithm run once
+    against always-Binance/always-Coinbase/always-Kraken and
+    best-effective-price routing, on real books for all three venues at
+    once. A single real window per strategy (not bootstrapped) -- matches
+    the CLI's own behavior exactly, see venues/README.md.
+    """
+    book_histories = {
+        "binance": BookHistoryReader(req.binance_book_history_path),
+        "coinbase": BookHistoryReader(req.coinbase_book_history_path),
+        "kraken": BookHistoryReader(req.kraken_book_history_path),
+    }
+    if req.reference_venue not in book_histories:
+        raise ValueError(f"reference_venue must be one of {list(book_histories)}, got {req.reference_venue!r}")
+
+    reference_history = book_histories[req.reference_venue]
+    start_time = reference_history.start_time + timedelta(seconds=req.start_offset_seconds)
+    end_time = start_time + timedelta(seconds=req.duration_seconds)
+    parent = ParentOrder(
+        venue=req.reference_venue, symbol=reference_history.symbol, side=req.side,
+        quantity=req.quantity, start_time=start_time, end_time=end_time,
+    )
+
+    fill_model = FillModel(req.temporary_impact_coef, req.permanent_impact_coef)
+    algorithm = _build_single_algorithm(reference_history, req)
+
+    routers = {f"always_{venue}": SingleVenueRouter(venue) for venue in book_histories}
+    routers["best_price"] = BestEffectivePriceRouter()
+
+    strategies = []
+    for name, router in routers.items():
+        simulator = MultiVenueSimulator(book_histories, VENUE_FEE_SCHEDULES, fill_model, router)
+        result = simulator.run(parent, algorithm)
+        routing_counts = dict(Counter(venue for _, venue in result.routing_decisions))
+        strategies.append({
+            "strategy": name,
+            "total_cost_bps": result.shortfall.total_cost_bps,
+            "executed_quantity": result.shortfall.executed_quantity,
+            "routing_counts": routing_counts,
+        })
+
+    naive_strategies = [s for s in strategies if s["strategy"] != "best_price"]
+    best_single_venue = min(naive_strategies, key=lambda s: s["total_cost_bps"])["strategy"]
+    best_price_cost = next(s["total_cost_bps"] for s in strategies if s["strategy"] == "best_price")
+    best_single_cost = next(s["total_cost_bps"] for s in strategies if s["strategy"] == best_single_venue)
+
+    return {
+        "reference_venue": req.reference_venue,
+        "algorithm": req.algorithm,
+        "strategies": strategies,
+        "best_single_venue": best_single_venue,
+        "smart_routing_improves": best_price_cost < best_single_cost,
+    }
